@@ -1,0 +1,67 @@
+{% extends "_layout/dashboard_base.html" %}
+
+{% block titulo %}Web Scraping{% endblock %}
+{% block mode_accent %}--accent-scraping{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='scraping/style.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page__header">
+  <div>
+    <h1 class="page__titulo">Web Scraping</h1>
+    <p class="page__descricao">
+      Varre lojas e catálogos na internet em busca das peças do {{ marca }} {{ modelo }} {{ versao }}
+      e traz as referências encontradas.
+    </p>
+  </div>
+</div>
+
+<div class="painel">
+  <h2 class="painel__titulo">Nova varredura</h2>
+  <p class="painel__legenda">Restrinja por categoria de peça ou deixe em branco para varrer tudo.</p>
+
+  <form class="form-scraping" data-form-scraping>
+    <div class="campo">
+      <label for="categoria">Categoria da peça</label>
+      <select id="categoria" name="categoria">
+        <option value="">Todas as categorias</option>
+        <option value="suspensao">Suspensão</option>
+        <option value="freios">Freios</option>
+        <option value="motor">Motor</option>
+        <option value="eletrica">Elétrica</option>
+        <option value="carroceria">Carroceria</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label for="termo">Palavra-chave (opcional)</label>
+      <input type="text" id="termo" name="termo" placeholder="ex.: amortecedor dianteiro">
+    </div>
+    <button type="submit" class="btn btn--primario" data-botao-iniciar>Iniciar varredura</button>
+  </form>
+</div>
+
+<div class="painel">
+  <div class="painel__cabecalho">
+    <div>
+      <h2 class="painel__titulo">Referências encontradas</h2>
+      <p class="painel__legenda">Resultado da última varredura para este veículo.</p>
+    </div>
+    <span class="status-varredura" data-status-varredura>Aguardando início</span>
+  </div>
+
+  <div data-resultado-scraping>
+    <div class="vazio">
+      <strong>Nenhuma varredura executada ainda</strong>
+      Inicie uma varredura acima para ver as peças e referências encontradas.
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='scraping/script.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,29 @@
+.form-scraping {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.painel__cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 4px;
+}
+
+.status-varredura {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  white-space: nowrap;
+  padding-top: 2px;
+}
+
+.status-varredura.esta-rodando { color: var(--mode-accent); }
+.status-varredura.esta-concluida { color: var(--ok); }
+
+@media (max-width: 700px) {
+  .form-scraping { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,17 @@
+.form-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.tabela-compare th:first-child,
+.tabela-compare td:first-child {
+  color: var(--text-muted);
+  width: 30%;
+}
+
+@media (max-width: 800px) {
+  .form-compare { grid-template-columns: 1fr; }
+  .tabela-compare { display: block; overflow-x: auto; }
+}

@@ -1,0 +1,54 @@
+{% extends "_layout/dashboard_base.html" %}
+
+{% block titulo %}Gov Mode{% endblock %}
+{% block mode_accent %}--accent-gov{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='gov/style.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page__header">
+  <div>
+    <h1 class="page__titulo">Gov Mode</h1>
+    <p class="page__descricao">
+      Consulta as bases de dados oficiais do governo para o {{ marca }} {{ modelo }} {{ versao }}.
+    </p>
+  </div>
+</div>
+
+<div class="painel">
+  <h2 class="painel__titulo">Consultar veículo</h2>
+  <p class="painel__legenda">Informe a placa ou o Renavam para consultar a base oficial.</p>
+
+  <form class="form-gov" data-form-gov>
+    <div class="campo">
+      <label for="placa">Placa</label>
+      <input type="text" id="placa" name="placa" placeholder="ABC1D23" maxlength="7">
+    </div>
+    <div class="campo">
+      <label for="renavam">Renavam</label>
+      <input type="text" id="renavam" name="renavam" placeholder="00000000000" maxlength="11">
+    </div>
+    <button type="submit" class="btn btn--primario" data-botao-consultar-gov>Consultar</button>
+  </form>
+</div>
+
+<div class="painel">
+  <h2 class="painel__titulo">Resultado da consulta</h2>
+  <p class="painel__legenda">Dados retornados pela base oficial para o veículo informado.</p>
+
+  <div data-resultado-gov>
+    <div class="vazio">
+      <strong>Nenhuma consulta realizada ainda</strong>
+      Informe a placa ou o Renavam acima para consultar a base do governo.
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='gov/script.js') }}"></script>
+{% endblock %}

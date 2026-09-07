@@ -1,0 +1,108 @@
+{% extends "_layout/dashboard_base.html" %}
+
+{% block titulo %}Home{% endblock %}
+{% block mode_accent %}--accent-home{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard/style.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page__header">
+  <div>
+    <h1 class="page__titulo">O que fazer com este carro</h1>
+    <p class="page__descricao">
+      Escolha uma operação abaixo. Cada uma consulta uma fonte diferente sobre o
+      {{ marca }} {{ modelo }} {{ versao }} e guarda o resultado para você revisar.
+    </p>
+  </div>
+</div>
+
+<div class="operacoes">
+
+  <a href="{{ url_for('scraping', marca=marca, modelo=modelo, versao=versao) }}" class="operacao" style="--op-accent: var(--accent-scraping)">
+    <span class="operacao__icone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+        <circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3" stroke-linecap="round"/>
+      </svg>
+    </span>
+    <div class="operacao__corpo">
+      <h2>Web Scraping</h2>
+      <p>Varre lojas e catálogos de peças na internet e traz as referências que pertencem a este carro.</p>
+    </div>
+    <span class="operacao__seta">Abrir</span>
+  </a>
+
+  <a href="{{ url_for('youtube', marca=marca, modelo=modelo, versao=versao) }}" class="operacao" style="--op-accent: var(--accent-youtube)">
+    <span class="operacao__icone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+        <rect x="3.5" y="6" width="17" height="12" rx="2.5"/>
+        <path d="M10.5 9.5l4.5 2.5-4.5 2.5z" fill="currentColor" stroke="none"/>
+      </svg>
+    </span>
+    <div class="operacao__corpo">
+      <h2>YouTube Search</h2>
+      <p>Busca vídeos de review deste carro, transcreve o áudio e classifica o sentimento de cada um.</p>
+    </div>
+    <span class="operacao__seta">Abrir</span>
+  </a>
+
+  <a href="{{ url_for('x_search', marca=marca, modelo=modelo, versao=versao) }}" class="operacao" style="--op-accent: var(--accent-x)">
+    <span class="operacao__icone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+        <path d="M5 5l14 14M19 5L5 19" stroke-linecap="round"/>
+      </svg>
+    </span>
+    <div class="operacao__corpo">
+      <h2>X Search</h2>
+      <p>Reúne o que estão comentando sobre este carro na plataforma X e classifica o tom das menções.</p>
+    </div>
+    <span class="operacao__seta">Abrir</span>
+  </a>
+
+  <a href="{{ url_for('gov', marca=marca, modelo=modelo, versao=versao) }}" class="operacao" style="--op-accent: var(--accent-gov)">
+    <span class="operacao__icone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+        <path d="M4 10l8-5 8 5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M5 10v8h14v-8M9 18v-5M15 18v-5" stroke-linecap="round"/>
+      </svg>
+    </span>
+    <div class="operacao__corpo">
+      <h2>Gov Mode</h2>
+      <p>Consulta as bases de dados oficiais do governo para este veículo.</p>
+    </div>
+    <span class="operacao__seta">Abrir</span>
+  </a>
+
+  <a href="{{ url_for('pipeline', marca=marca, modelo=modelo, versao=versao) }}" class="operacao" style="--op-accent: var(--accent-pipeline)">
+    <span class="operacao__icone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+        <circle cx="5" cy="6" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="18" r="2"/>
+        <path d="M7 6h6a4 4 0 014 4M7 18h6a4 4 0 004-4" stroke-linecap="round"/>
+      </svg>
+    </span>
+    <div class="operacao__corpo">
+      <h2>Pipeline</h2>
+      <p>Agenda execuções recorrentes de qualquer modo acima e guarda os resultados automaticamente.</p>
+    </div>
+    <span class="operacao__seta">Abrir</span>
+  </a>
+
+  <a href="{{ url_for('compare', marca=marca, modelo=modelo, versao=versao) }}" class="operacao" style="--op-accent: var(--accent-compare)">
+    <span class="operacao__icone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+        <rect x="4" y="4" width="7" height="16" rx="1.5"/>
+        <rect x="13" y="8" width="7" height="12" rx="1.5"/>
+      </svg>
+    </span>
+    <div class="operacao__corpo">
+      <h2>Compare</h2>
+      <p>Coloca até três carros lado a lado e compara os dados já coletados entre eles.</p>
+    </div>
+    <span class="operacao__seta">Abrir</span>
+  </a>
+
+</div>
+
+{% endblock %}

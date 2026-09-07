@@ -1,0 +1,51 @@
+{% extends "_layout/dashboard_base.html" %}
+
+{% block titulo %}YouTube Search{% endblock %}
+{% block mode_accent %}--accent-youtube{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='youtube/style.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page__header">
+  <div>
+    <h1 class="page__titulo">YouTube Search</h1>
+    <p class="page__descricao">
+      Busca vídeos de review do {{ marca }} {{ modelo }} {{ versao }}, transcreve o áudio
+      e classifica o sentimento de cada vídeo em relação ao carro.
+    </p>
+  </div>
+</div>
+
+<div class="painel">
+  <h2 class="painel__titulo">Buscar vídeos</h2>
+  <p class="painel__legenda">Use uma palavra-chave livre ou cole o link de um vídeo específico.</p>
+
+  <form class="form-youtube" data-form-youtube>
+    <div class="campo">
+      <label for="consulta-yt">Palavra-chave ou link do vídeo</label>
+      <input type="text" id="consulta-yt" name="consulta" placeholder="ex.: review {{ marca }} {{ modelo }}">
+    </div>
+    <button type="submit" class="btn btn--primario" data-botao-buscar-yt>Buscar vídeos</button>
+  </form>
+</div>
+
+<div class="painel">
+  <h2 class="painel__titulo">Vídeos analisados</h2>
+  <p class="painel__legenda">Transcrição e classificação de sentimento de cada review encontrado.</p>
+
+  <div data-resultado-youtube>
+    <div class="vazio">
+      <strong>Nenhuma busca realizada ainda</strong>
+      Busque vídeos acima para ver a transcrição e o sentimento de cada review.
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='youtube/script.js') }}"></script>
+{% endblock %}

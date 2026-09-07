@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block titulo %}Painel do veículo{% endblock %} — {{ marca }} {{ modelo }}</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='shared/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='shared/sidebar.css') }}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+  <div class="shell" data-shell style="--mode-accent: var({% block mode_accent %}--accent-home{% endblock %})">
+
+    {% include "_layout/_sidebar.html" %}
+
+    <div class="shell__main">
+
+      <header class="vehicle-bar">
+        <div class="vehicle-bar__id">
+          <span class="vehicle-bar__nome">{{ marca }} {{ modelo }}</span>
+          <span class="vehicle-bar__versao">{{ versao }}</span>
+        </div>
+        <a href="{{ url_for('busca') }}" class="vehicle-bar__trocar">Trocar veículo</a>
+      </header>
+
+      <div class="page">
+        {% block content %}{% endblock %}
+      </div>
+
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='shared/sidebar.js') }}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

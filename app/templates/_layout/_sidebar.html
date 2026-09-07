@@ -1,0 +1,124 @@
+{# ============================================================
+   _sidebar.html — navegação entre a home e os modos de consulta
+   Recebe implicitamente `request.endpoint` do Flask para marcar
+   o item ativo.
+   ============================================================ #}
+<aside class="sidebar" aria-label="Navegação entre modos">
+
+  <div class="sidebar__topo">
+    <span class="sidebar__marca" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 12h4l2-6h6l2 6h4M5 12v5h14v-5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="8" cy="17.5" r="1.6"/>
+        <circle cx="16" cy="17.5" r="1.6"/>
+      </svg>
+    </span>
+    <span class="sidebar__nome">Painel do veículo</span>
+    <button type="button" class="sidebar__toggle" data-sidebar-toggle aria-expanded="true" aria-label="Recolher menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M15 6l-6 6 6 6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <nav class="sidebar__nav">
+
+    <a href="{{ url_for('dashboard', marca=marca, modelo=modelo, versao=versao) }}"
+       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'dashboard' }}"
+       style="--item-accent: var(--accent-home)"
+       data-rotulo="Home">
+      <span class="sidebar__item-icone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M4 11.5L12 4l8 7.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M6 10v9h12v-9" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="sidebar__item-texto">Home</span>
+    </a>
+
+    <p class="sidebar__grupo-rotulo">Modos de consulta</p>
+
+    <a href="{{ url_for('scraping', marca=marca, modelo=modelo, versao=versao) }}"
+       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'scraping' }}"
+       style="--item-accent: var(--accent-scraping)"
+       data-rotulo="Web Scraping">
+      <span class="sidebar__item-icone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <circle cx="11" cy="11" r="6.5"/>
+          <path d="M20 20l-4.3-4.3" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="sidebar__item-texto">Web Scraping</span>
+    </a>
+
+    <a href="{{ url_for('youtube', marca=marca, modelo=modelo, versao=versao) }}"
+       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'youtube' }}"
+       style="--item-accent: var(--accent-youtube)"
+       data-rotulo="YouTube Search">
+      <span class="sidebar__item-icone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <rect x="3.5" y="6" width="17" height="12" rx="2.5"/>
+          <path d="M10.5 9.5l4.5 2.5-4.5 2.5z" fill="currentColor" stroke="none"/>
+        </svg>
+      </span>
+      <span class="sidebar__item-texto">YouTube Search</span>
+    </a>
+
+    <a href="{{ url_for('x_search', marca=marca, modelo=modelo, versao=versao) }}"
+       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'x_search' }}"
+       style="--item-accent: var(--accent-x)"
+       data-rotulo="X Search">
+      <span class="sidebar__item-icone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M5 5l14 14M19 5L5 19" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="sidebar__item-texto">X Search</span>
+    </a>
+
+    <a href="{{ url_for('gov', marca=marca, modelo=modelo, versao=versao) }}"
+       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'gov' }}"
+       style="--item-accent: var(--accent-gov)"
+       data-rotulo="Gov Mode">
+      <span class="sidebar__item-icone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M4 10l8-5 8 5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M5 10v8h14v-8M9 18v-5M15 18v-5" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="sidebar__item-texto">Gov Mode</span>
+    </a>
+
+    <p class="sidebar__grupo-rotulo">Automação</p>
+
+    <a href="{{ url_for('pipeline', marca=marca, modelo=modelo, versao=versao) }}"
+       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'pipeline' }}"
+       style="--item-accent: var(--accent-pipeline)"
+       data-rotulo="Pipeline">
+      <span class="sidebar__item-icone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <circle cx="5" cy="6" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="18" r="2"/>
+          <path d="M7 6h6a4 4 0 014 4M7 18h6a4 4 0 004-4" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="sidebar__item-texto">Pipeline</span>
+    </a>
+
+    <a href="{{ url_for('compare', marca=marca, modelo=modelo, versao=versao) }}"
+       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'compare' }}"
+       style="--item-accent: var(--accent-compare)"
+       data-rotulo="Compare">
+      <span class="sidebar__item-icone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <rect x="4" y="4" width="7" height="16" rx="1.5"/>
+          <rect x="13" y="8" width="7" height="12" rx="1.5"/>
+        </svg>
+      </span>
+      <span class="sidebar__item-texto">Compare</span>
+    </a>
+
+  </nav>
+
+  <div class="sidebar__rodape">v0.1 — módulos em desenvolvimento</div>
+
+</aside>

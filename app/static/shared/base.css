@@ -1,0 +1,343 @@
+/* ============================================================
+   BASE.CSS — tokens de design compartilhados por todo o dashboard
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+:root {
+  /* superfícies */
+  --bg-base: #101316;
+  --bg-panel: #171b1f;
+  --bg-panel-raised: #1d2226;
+  --hairline: #2a3036;
+  --hairline-strong: #383f46;
+
+  /* texto */
+  --text-primary: #e9ebec;
+  --text-muted: #8d959b;
+  --text-faint: #5c6368;
+
+  /* cor de identificação por modo — "luzes de painel" */
+  --accent-home: #e3a83b;
+  --accent-scraping: #49afc2;
+  --accent-youtube: #c15c52;
+  --accent-x: #8c8fc9;
+  --accent-gov: #6b9c71;
+  --accent-pipeline: #6c86cf;
+  --accent-compare: #c07a94;
+
+  /* estado */
+  --ok: #6b9c71;
+  --warn: #d9a441;
+  --danger: #c15c52;
+
+  /* forma */
+  --radius: 4px;
+  --radius-lg: 8px;
+
+  /* tipografia */
+  --font-sans: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+
+  /* layout */
+  --sidebar-w: 248px;
+  --sidebar-w-collapsed: 68px;
+  --header-h: 64px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+}
+
+a { color: inherit; text-decoration: none; }
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--mode-accent, var(--accent-home)) 35%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--mode-accent, var(--accent-home));
+  outline-offset: 2px;
+}
+
+/* ---------- shell: sidebar + conteúdo ---------- */
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  min-height: 100vh;
+  transition: grid-template-columns 0.18s ease;
+}
+
+.shell.is-collapsed {
+  grid-template-columns: var(--sidebar-w-collapsed) 1fr;
+}
+
+.shell__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* ---------- cabeçalho do veículo selecionado ---------- */
+
+.vehicle-bar {
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 28px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--bg-panel);
+  flex-shrink: 0;
+}
+
+.vehicle-bar__id {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.vehicle-bar__nome {
+  font-weight: 600;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vehicle-bar__versao {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.vehicle-bar__trocar {
+  font-size: 13px;
+  color: var(--text-muted);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius);
+  padding: 7px 14px;
+  white-space: nowrap;
+}
+
+.vehicle-bar__trocar:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+/* ---------- área de página ---------- */
+
+.page {
+  flex: 1;
+  padding: 32px 28px 48px;
+}
+
+.page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--hairline);
+  position: relative;
+}
+
+.page__header::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 44px;
+  height: 2px;
+  background: var(--mode-accent, var(--accent-home));
+}
+
+.page__titulo {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+
+.page__descricao {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0;
+  max-width: 60ch;
+  line-height: 1.55;
+}
+
+/* ---------- painel genérico ---------- */
+
+.painel {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+}
+
+.painel + .painel {
+  margin-top: 20px;
+}
+
+.painel__titulo {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.painel__legenda {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 0 0 18px;
+}
+
+/* ---------- botões ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  font-size: 13.5px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.btn--primario {
+  background: var(--mode-accent, var(--accent-home));
+  color: #14171a;
+}
+
+.btn--primario:hover { filter: brightness(1.08); }
+
+.btn--linha {
+  border-color: var(--hairline-strong);
+  color: var(--text-primary);
+  background: transparent;
+}
+
+.btn--linha:hover { border-color: var(--text-muted); }
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------- formulário ---------- */
+
+.campo { display: flex; flex-direction: column; gap: 6px; }
+
+.campo label {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.campo input,
+.campo select {
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius);
+  padding: 9px 11px;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+}
+
+.campo input:focus,
+.campo select:focus {
+  border-color: var(--mode-accent, var(--accent-home));
+}
+
+/* ---------- tabela de dados ---------- */
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tabela th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--hairline-strong);
+  font-size: 12px;
+}
+
+.tabela td {
+  padding: 10px 10px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.tabela tr:last-child td { border-bottom: none; }
+
+.dado-mono {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+/* ---------- selo de status/sentimento ---------- */
+
+.selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 3px 9px;
+  border-radius: 100px;
+  border: 1px solid var(--hairline-strong);
+}
+
+.selo::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.selo--positivo { color: var(--ok); }
+.selo--neutro { color: var(--text-muted); }
+.selo--negativo { color: var(--danger); }
+.selo--pendente { color: var(--warn); }
+
+/* ---------- estado vazio ---------- */
+
+.vazio {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13.5px;
+}
+
+.vazio strong { color: var(--text-primary); display: block; margin-bottom: 4px; font-size: 14px; }
+
+@media (max-width: 860px) {
+  .shell { grid-template-columns: 1fr; }
+  .shell.is-collapsed { grid-template-columns: 1fr; }
+}

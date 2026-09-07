@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Consulta de Veículos</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='busca/style.css') }}">
+</head>
+<body>
+
+  <main class="painel">
+    <header class="painel__cabecalho">
+      <h1>Consulta de veículos</h1>
+      <p>Escolha a marca, depois o modelo, depois a versão.</p>
+    </header>
+
+    <div class="campo">
+      <label for="marca">Marca</label>
+      <select id="marca">
+        <option value="">Selecione a marca</option>
+      </select>
+    </div>
+
+    <div class="campo">
+      <label for="modelo">Modelo</label>
+      <select id="modelo" disabled>
+        <option value="">Selecione a marca primeiro</option>
+      </select>
+    </div>
+
+    <div class="campo">
+      <label for="versao">Versão</label>
+      <select id="versao" disabled>
+        <option value="">Selecione o modelo primeiro</option>
+      </select>
+    </div>
+
+    <p id="mensagem" class="mensagem" aria-live="polite"></p>
+
+    <button id="botaoBuscar" class="botao-buscar" type="button" hidden>
+      Buscar
+    </button>
+  </main>
+
+  <script src="{{ url_for('static', filename='busca/script.js') }}"></script>
+</body>
+</html>

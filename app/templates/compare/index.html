@@ -1,0 +1,58 @@
+{% extends "_layout/dashboard_base.html" %}
+
+{% block titulo %}Compare{% endblock %}
+{% block mode_accent %}--accent-compare{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='compare/style.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page__header">
+  <div>
+    <h1 class="page__titulo">Compare</h1>
+    <p class="page__descricao">
+      Escolha de dois a três carros e compare os dados já coletados entre eles.
+    </p>
+  </div>
+</div>
+
+<div class="painel">
+  <h2 class="painel__titulo">Carros a comparar</h2>
+  <p class="painel__legenda">O primeiro campo já vem preenchido com o veículo selecionado no momento.</p>
+
+  <form class="form-compare" data-form-compare>
+    <div class="campo">
+      <label for="carro-1">Carro 1</label>
+      <input type="text" id="carro-1" name="carro_1" value="{{ marca }} {{ modelo }} {{ versao }}">
+    </div>
+    <div class="campo">
+      <label for="carro-2">Carro 2</label>
+      <input type="text" id="carro-2" name="carro_2" placeholder="ex.: Honda Civic Touring">
+    </div>
+    <div class="campo">
+      <label for="carro-3">Carro 3 (opcional)</label>
+      <input type="text" id="carro-3" name="carro_3" placeholder="opcional">
+    </div>
+    <button type="submit" class="btn btn--primario" data-botao-comparar>Comparar</button>
+  </form>
+</div>
+
+<div class="painel">
+  <h2 class="painel__titulo">Comparativo</h2>
+  <p class="painel__legenda">Dados reunidos pelos outros modos para cada carro selecionado.</p>
+
+  <div data-resultado-compare>
+    <div class="vazio">
+      <strong>Nenhuma comparação feita ainda</strong>
+      Informe os carros acima e clique em comparar.
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='compare/script.js') }}"></script>
+{% endblock %}

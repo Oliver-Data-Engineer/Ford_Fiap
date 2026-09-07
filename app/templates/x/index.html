@@ -1,0 +1,51 @@
+{% extends "_layout/dashboard_base.html" %}
+
+{% block titulo %}X Search{% endblock %}
+{% block mode_accent %}--accent-x{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='x/style.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page__header">
+  <div>
+    <h1 class="page__titulo">X Search</h1>
+    <p class="page__descricao">
+      Reúne o que estão publicando sobre o {{ marca }} {{ modelo }} {{ versao }} na plataforma X
+      e classifica o tom de cada menção.
+    </p>
+  </div>
+</div>
+
+<div class="painel">
+  <h2 class="painel__titulo">Buscar menções</h2>
+  <p class="painel__legenda">Refine com termos adicionais ou deixe em branco para buscar pelo nome do carro.</p>
+
+  <form class="form-x" data-form-x>
+    <div class="campo">
+      <label for="consulta-x">Termos adicionais (opcional)</label>
+      <input type="text" id="consulta-x" name="consulta" placeholder="ex.: consumo, defeito, recall">
+    </div>
+    <button type="submit" class="btn btn--primario" data-botao-buscar-x>Buscar menções</button>
+  </form>
+</div>
+
+<div class="painel">
+  <h2 class="painel__titulo">Menções coletadas</h2>
+  <p class="painel__legenda">Posts e comentários encontrados, com a classificação de sentimento de cada um.</p>
+
+  <div data-resultado-x>
+    <div class="vazio">
+      <strong>Nenhuma busca realizada ainda</strong>
+      Busque menções acima para ver o que estão comentando sobre este carro.
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='x/script.js') }}"></script>
+{% endblock %}

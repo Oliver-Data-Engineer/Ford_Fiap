@@ -1,0 +1,64 @@
+{% extends "_layout/dashboard_base.html" %}
+
+{% block titulo %}Pipeline{% endblock %}
+{% block mode_accent %}--accent-pipeline{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='pipeline/style.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page__header">
+  <div>
+    <h1 class="page__titulo">Pipeline</h1>
+    <p class="page__descricao">
+      Agenda execuções recorrentes de qualquer modo de consulta para o {{ marca }} {{ modelo }} {{ versao }}
+      e guarda os resultados automaticamente.
+    </p>
+  </div>
+</div>
+
+<div class="painel">
+  <h2 class="painel__titulo">Novo agendamento</h2>
+  <p class="painel__legenda">Escolha o modo a ser executado e a frequência de repetição.</p>
+
+  <form class="form-pipeline" data-form-pipeline>
+    <div class="campo">
+      <label for="modo-pipeline">Modo</label>
+      <select id="modo-pipeline" name="modo">
+        <option value="scraping">Web Scraping</option>
+        <option value="youtube">YouTube Search</option>
+        <option value="x">X Search</option>
+        <option value="gov">Gov Mode</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label for="frequencia">Frequência</label>
+      <select id="frequencia" name="frequencia">
+        <option value="diaria">Diária</option>
+        <option value="semanal">Semanal</option>
+        <option value="mensal">Mensal</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn--primario" data-botao-agendar>Criar agendamento</button>
+  </form>
+</div>
+
+<div class="painel">
+  <h2 class="painel__titulo">Agendamentos ativos</h2>
+  <p class="painel__legenda">Execuções programadas para este veículo, com a data da próxima rodada.</p>
+
+  <div data-lista-pipelines>
+    <div class="vazio">
+      <strong>Nenhum agendamento criado ainda</strong>
+      Crie um agendamento acima para automatizar a coleta de dados deste veículo.
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='pipeline/script.js') }}"></script>
+{% endblock %}
