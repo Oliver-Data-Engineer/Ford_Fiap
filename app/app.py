@@ -1,21 +1,38 @@
-from flask import Flask, render_template, request
+"""
+app.py
+Servidor Flask — renderiza os templates do dashboard e atua como proxy
+reverso para a API FastAPI (porta 8000), evitando problemas de CORS no browser.
+
+Inicia com:
+    flask --app app/app.py run --port 5000 --debug
+  ou:
+    python app/app.py
+"""
+import httpx
+from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 
+# URL base da API FastAPI — ajuste se rodar em host/porta diferente
+FASTAPI_BASE = "http://127.0.0.1:8000"
+
 
 # ---------------------------------------------------------------------------
-# Veículo selecionado — vem por query string (?marca=...&modelo=...&versao=...)
-# em todas as páginas do dashboard. Esse helper evita repetir as três linhas
-# de request.args.get em cada rota abaixo.
+# Helper: veículo selecionado via query string
 # ---------------------------------------------------------------------------
 
-def veiculo_selecionado():
+def veiculo_selecionado() -> dict:
+    """Lê marca/modelo/versao da query string — presente em todas as páginas."""
     return {
-        "marca": request.args.get("marca", ""),
+        "marca":  request.args.get("marca",  ""),
         "modelo": request.args.get("modelo", ""),
         "versao": request.args.get("versao", ""),
     }
 
+
+# ---------------------------------------------------------------------------
+# Páginas do dashboard
+# ---------------------------------------------------------------------------
 
 @app.route("/")
 def busca():
@@ -27,97 +44,121 @@ def dashboard():
     return render_template("dashboard/index.html", **veiculo_selecionado())
 
 
-# ---------------------------------------------------------------------------
-# Web Scraping Mode
-# ---------------------------------------------------------------------------
-
 @app.route("/scraping")
 def scraping():
     return render_template("scraping/index.html", **veiculo_selecionado())
 
-
-@app.route("/scraping/executar", methods=["POST"])
-def scraping_executar():
-    # TODO: disparar a varredura de fato e devolver as peças encontradas.
-    return {"pecas": []}
-
-
-# ---------------------------------------------------------------------------
-# YouTube Search Mode
-# ---------------------------------------------------------------------------
 
 @app.route("/youtube")
 def youtube():
     return render_template("youtube/index.html", **veiculo_selecionado())
 
 
-@app.route("/youtube/executar", methods=["POST"])
-def youtube_executar():
-    # TODO: buscar vídeos, transcrever e classificar o sentimento.
-    return {"videos": []}
-
-
-# ---------------------------------------------------------------------------
-# X Search Mode
-# (endpoint chamado "x_search" porque "x" sozinho colide com o módulo x do
-#  Python em alguns editores/linters — mas a URL continua sendo /x)
-# ---------------------------------------------------------------------------
-
 @app.route("/x")
 def x_search():
     return render_template("x/index.html", **veiculo_selecionado())
 
-
-@app.route("/x/executar", methods=["POST"])
-def x_executar():
-    # TODO: coletar menções na plataforma X e classificar o sentimento.
-    return {"mencoes": []}
-
-
-# ---------------------------------------------------------------------------
-# Gov Mode
-# ---------------------------------------------------------------------------
 
 @app.route("/gov")
 def gov():
     return render_template("gov/index.html", **veiculo_selecionado())
 
 
-@app.route("/gov/consultar", methods=["POST"])
-def gov_consultar():
-    # TODO: consultar a base oficial do governo pela placa/Renavam.
-    return {"dados": None}
-
-
-# ---------------------------------------------------------------------------
-# Pipeline Mode
-# ---------------------------------------------------------------------------
-
 @app.route("/pipeline")
 def pipeline():
     return render_template("pipeline/index.html", **veiculo_selecionado())
 
-
-@app.route("/pipeline/criar", methods=["POST"])
-def pipeline_criar():
-    # TODO: gravar o agendamento (modo + frequência) e devolver a lista atualizada.
-    return {"pipelines": []}
-
-
-# ---------------------------------------------------------------------------
-# Compare Mode
-# ---------------------------------------------------------------------------
 
 @app.route("/compare")
 def compare():
     return render_template("compare/index.html", **veiculo_selecionado())
 
 
+# ---------------------------------------------------------------------------
+# Proxy GET — repassa listagens para a FastAPI (/specs/*)
+#
+# O browser chama Flask (mesma origem, sem CORS) e Flask encaminha para
+# FastAPI internamente.  Qualquer rota /specs/<caminho> é suportada.
+# ---------------------------------------------------------------------------
+
+@app.route("/specs/<path:caminho>")
+def specs_proxy_get(caminho: str):
+    """
+    Proxy transparente para GET /specs/*.
+    Repassa a query string original e devolve a resposta da FastAPI.
+    """
+    url = f"{FASTAPI_BASE}/specs/{caminho}"
+    params = request.args.to_dict(flat=False)  # preserva multi-valor
+
+    try:
+        resp = httpx.get(url, params=params, timeout=12.0)
+        return jsonify(resp.json()), resp.status_code
+    except httpx.TimeoutException:
+        return jsonify({"erro": "Tempo limite excedido ao consultar a API."}), 504
+    except Exception as exc:
+        return jsonify({"erro": f"Erro interno: {exc}"}), 500
+
+
+# ---------------------------------------------------------------------------
+# Proxy POST — executa busca de especificações técnicas
+# ---------------------------------------------------------------------------
+
+@app.route("/scraping/executar", methods=["POST"])
+def scraping_executar():
+    """
+    Proxy para POST /specs/executar.
+
+    Recebe o JSON do browser, encaminha para a FastAPI e devolve
+    {"especificacoes": [...]} ou {"erro": "..."}.
+    """
+    payload = request.get_json(force=True, silent=True) or {}
+
+    try:
+        resp = httpx.post(
+            f"{FASTAPI_BASE}/specs/executar",
+            json=payload,
+            timeout=35.0,  # margem acima dos 30 s do AbortController no browser
+        )
+        return jsonify(resp.json()), resp.status_code
+
+    except httpx.TimeoutException:
+        return jsonify({"erro": "Tempo limite excedido ao consultar as fontes."}), 504
+    except Exception as exc:
+        return jsonify({"erro": f"Erro interno: {exc}"}), 500
+
+
+# ---------------------------------------------------------------------------
+# Proxies POST restantes (stubs existentes — mantidos para compatibilidade)
+# ---------------------------------------------------------------------------
+
+@app.route("/youtube/executar", methods=["POST"])
+def youtube_executar():
+    return jsonify({"videos": []})
+
+
+@app.route("/x/executar", methods=["POST"])
+def x_executar():
+    return jsonify({"mencoes": []})
+
+
+@app.route("/gov/consultar", methods=["POST"])
+def gov_consultar():
+    return jsonify({"dados": None})
+
+
+@app.route("/pipeline/criar", methods=["POST"])
+def pipeline_criar():
+    return jsonify({"pipelines": []})
+
+
 @app.route("/compare/rodar", methods=["POST"])
 def compare_rodar():
-    # TODO: reunir os dados já coletados de cada carro informado e montar as linhas do comparativo.
-    return {"carros": [], "linhas": []}
+    return jsonify({"carros": [], "linhas": []})
 
+
+# ---------------------------------------------------------------------------
+# Ponto de entrada direto
+# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

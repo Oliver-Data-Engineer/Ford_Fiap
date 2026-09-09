@@ -1,6 +1,6 @@
 {% extends "_layout/dashboard_base.html" %}
 
-{% block titulo %}Web Scraping{% endblock %}
+{% block titulo %}Especificações Técnicas{% endblock %}
 {% block mode_accent %}--accent-scraping{% endblock %}
 
 {% block extra_css %}
@@ -11,52 +11,106 @@
 
 <div class="page__header">
   <div>
-    <h1 class="page__titulo">Web Scraping</h1>
+    <h1 class="page__titulo">Especificações Técnicas</h1>
     <p class="page__descricao">
-      Varre lojas e catálogos na internet em busca das peças do {{ marca }} {{ modelo }} {{ versao }}
-      e traz as referências encontradas.
+      Busca e normaliza as fichas técnicas da concorrência para
+      <strong>{{ marca }} {{ modelo }}{% if versao %} — {{ versao }}{% endif %}</strong>.
     </p>
   </div>
 </div>
 
+{# ── Painel de pesquisa ──────────────────────────────────────────────────── #}
 <div class="painel">
-  <h2 class="painel__titulo">Nova varredura</h2>
-  <p class="painel__legenda">Restrinja por categoria de peça ou deixe em branco para varrer tudo.</p>
+  <h2 class="painel__titulo">Pesquisa</h2>
+  <p class="painel__legenda">
+    Informe os atributos que deseja consultar, um por linha ou separados por
+    vírgula. Deixe em branco para retornar todas as especificações disponíveis.
+  </p>
 
-  <form class="form-scraping" data-form-scraping>
-    <div class="campo">
-      <label for="categoria">Categoria da peça</label>
-      <select id="categoria" name="categoria">
-        <option value="">Todas as categorias</option>
-        <option value="suspensao">Suspensão</option>
-        <option value="freios">Freios</option>
-        <option value="motor">Motor</option>
-        <option value="eletrica">Elétrica</option>
-        <option value="carroceria">Carroceria</option>
-      </select>
+  <form class="form-specs" data-form-specs>
+
+    <div class="campo campo--full">
+      <label for="atributos">Atributos desejados <span class="campo__opcional">(opcional)</span></label>
+      <textarea
+        id="atributos"
+        name="atributos"
+        class="campo__textarea"
+        placeholder="Ex: motor, potência, torque, tração, câmbio"
+        maxlength="2000"
+        rows="3"
+        aria-describedby="atributos-ajuda"
+      ></textarea>
+      <p id="atributos-ajuda" class="campo__ajuda">
+        Exemplos: <em>motor, potência, torque, tração, câmbio, tanque, suspensão</em>
+      </p>
     </div>
-    <div class="campo">
-      <label for="termo">Palavra-chave (opcional)</label>
-      <input type="text" id="termo" name="termo" placeholder="ex.: amortecedor dianteiro">
+
+    {# Dados do veículo passados pelo Flask via query string — usados pelo JS #}
+    <input type="hidden" id="veiculo-marca"  value="{{ marca }}">
+    <input type="hidden" id="veiculo-modelo" value="{{ modelo }}">
+    <input type="hidden" id="veiculo-versao" value="{{ versao }}">
+
+    <div class="form-specs__rodape">
+      <button type="submit" class="btn btn--primario" data-botao-buscar>
+        Buscar especificações
+      </button>
+      <span class="status-busca" data-status-busca aria-live="polite"></span>
     </div>
-    <button type="submit" class="btn btn--primario" data-botao-iniciar>Iniciar varredura</button>
+
   </form>
 </div>
 
-<div class="painel">
+{# ── Painel de resultado ─────────────────────────────────────────────────── #}
+<div class="painel" data-painel-resultado hidden>
+
   <div class="painel__cabecalho">
     <div>
-      <h2 class="painel__titulo">Referências encontradas</h2>
-      <p class="painel__legenda">Resultado da última varredura para este veículo.</p>
+      <h2 class="painel__titulo">Resultado</h2>
+      <p class="painel__legenda" data-contador-specs aria-live="polite"></p>
     </div>
-    <span class="status-varredura" data-status-varredura>Aguardando início</span>
+    <button
+      type="button"
+      class="btn btn--secundario"
+      data-botao-csv
+      hidden
+      aria-label="Exportar especificações em CSV"
+    >
+      Exportar CSV
+    </button>
   </div>
 
-  <div data-resultado-scraping>
-    <div class="vazio">
-      <strong>Nenhuma varredura executada ainda</strong>
-      Inicie uma varredura acima para ver as peças e referências encontradas.
+  {# Aviso de limite de linhas #}
+  <div class="aviso aviso--limite" data-aviso-limite hidden role="alert">
+    Exibindo apenas as primeiras 500 especificações encontradas.
+  </div>
+
+  {# Área de conteúdo — spinner / tabela / estado vazio / erro #}
+  <div data-area-resultado>
+
+    <div class="spinner-wrap" data-spinner hidden aria-label="Carregando…" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+      <span class="spinner__texto">Consultando fontes…</span>
     </div>
+
+    <div class="vazio" data-estado-vazio hidden>
+      <strong>Nenhuma especificação encontrada para os critérios informados.</strong>
+    </div>
+
+    <div class="erro-inline" data-estado-erro hidden role="alert"></div>
+
+    <div class="tabela-wrap" data-tabela-wrap hidden>
+      <table class="tabela tabela--specs" aria-label="Especificações técnicas">
+        <thead>
+          <tr>
+            <th scope="col">Atributo</th>
+            <th scope="col">Valor</th>
+            <th scope="col">Fonte</th>
+          </tr>
+        </thead>
+        <tbody data-tabela-corpo></tbody>
+      </table>
+    </div>
+
   </div>
 </div>
 
