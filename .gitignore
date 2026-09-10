@@ -1,3 +1,15 @@
 venv
 __pycache__
 pycahce/
+
+# Credenciais — nunca comitar
+.env
+config/
+*-service-account*.json
+service-account*.json
+
+# Dados persistidos pelo Playground (prompts, pipelines, execuções)
+data/
+
+# CSVs gerados pelos notebooks
+*.csv

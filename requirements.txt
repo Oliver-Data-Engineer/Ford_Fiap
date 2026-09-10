@@ -92,3 +92,10 @@ urllib3==2.7.0
 uvicorn==0.52.4
 wcwidth==0.8.3
 Werkzeug==3.1.8
+
+# ── YouTube Playground / pipelines de análise (adicionado) ────────────────────
+youtube-transcript-api==1.2.2
+
+# ── Banco local (tabelas RAW/REFINED/TRUST das execuções) ─────────────────────
+sqlalchemy==2.0.52
+greenlet==3.5.5

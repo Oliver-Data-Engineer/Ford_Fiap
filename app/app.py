@@ -128,13 +128,58 @@ def scraping_executar():
 
 
 # ---------------------------------------------------------------------------
-# Proxies POST restantes (stubs existentes — mantidos para compatibilidade)
+# Proxy /api/* — encaminha para a FastAPI
+#
+# O browser fala apenas com o Flask (mesma origem, sem CORS) e o Flask
+# repassa para a FastAPI.  É por aqui que passam /youtube, /prompts e
+# /pipelines — o JavaScript nunca conhece a porta 8000 nem credencial alguma.
 # ---------------------------------------------------------------------------
 
-@app.route("/youtube/executar", methods=["POST"])
-def youtube_executar():
-    return jsonify({"videos": []})
+# Operações que envolvem rede externa (busca no YouTube, chamada ao LLM)
+# levam bem mais tempo que uma listagem.
+TIMEOUT_LEITURA = 20.0
+TIMEOUT_ESCRITA = 180.0
 
+
+@app.route("/api/<path:caminho>", methods=["GET", "POST", "PUT", "DELETE"])
+def api_proxy(caminho: str):
+    """
+    Proxy transparente para a FastAPI.
+
+    Preserva método, query string e corpo JSON, e devolve a resposta original
+    (status incluído) para que o frontend trate os erros da API.
+    """
+    url = f"{FASTAPI_BASE}/{caminho}"
+    metodo = request.method
+    timeout = TIMEOUT_LEITURA if metodo == "GET" else TIMEOUT_ESCRITA
+
+    try:
+        resp = httpx.request(
+            metodo,
+            url,
+            params=request.args.to_dict(flat=False),
+            json=(request.get_json(silent=True) if metodo in ("POST", "PUT") else None),
+            timeout=timeout,
+        )
+    except httpx.TimeoutException:
+        return jsonify({"erro": "Tempo limite excedido ao consultar a API."}), 504
+    except httpx.ConnectError:
+        return jsonify({
+            "erro": "API indisponível — inicie a FastAPI com "
+                    "'uvicorn main:app --port 8000'."
+        }), 503
+    except Exception as exc:
+        return jsonify({"erro": f"Erro interno: {exc}"}), 500
+
+    try:
+        return jsonify(resp.json()), resp.status_code
+    except ValueError:
+        return jsonify({"erro": "Resposta inválida da API."}), 502
+
+
+# ---------------------------------------------------------------------------
+# Proxies POST restantes (stubs existentes — mantidos para compatibilidade)
+# ---------------------------------------------------------------------------
 
 @app.route("/x/executar", methods=["POST"])
 def x_executar():
@@ -144,11 +189,6 @@ def x_executar():
 @app.route("/gov/consultar", methods=["POST"])
 def gov_consultar():
     return jsonify({"dados": None})
-
-
-@app.route("/pipeline/criar", methods=["POST"])
-def pipeline_criar():
-    return jsonify({"pipelines": []})
 
 
 @app.route("/compare/rodar", methods=["POST"])

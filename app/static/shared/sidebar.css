@@ -30,7 +30,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #14171a;
+  color: #ffffff;
 }
 
 .sidebar__marca svg { width: 15px; height: 15px; }
@@ -126,8 +126,9 @@
 .is-collapsed .sidebar__item { justify-content: center; }
 
 .sidebar__item.is-ativo {
-  background: var(--bg-panel-raised);
+  background: color-mix(in srgb, var(--item-accent, var(--accent-home)) 10%, transparent);
   color: var(--text-primary);
+  font-weight: 500;
 }
 
 .sidebar__item.is-ativo::before {

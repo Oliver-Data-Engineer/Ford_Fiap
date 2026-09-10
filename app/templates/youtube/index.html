@@ -1,6 +1,6 @@
 {% extends "_layout/dashboard_base.html" %}
 
-{% block titulo %}YouTube Search{% endblock %}
+{% block titulo %}YouTube Playground{% endblock %}
 {% block mode_accent %}--accent-youtube{% endblock %}
 
 {% block extra_css %}
@@ -11,36 +11,499 @@
 
 <div class="page__header">
   <div>
-    <h1 class="page__titulo">YouTube Search</h1>
+    <h1 class="page__titulo">YouTube Playground</h1>
     <p class="page__descricao">
-      Busca vídeos de review do {{ marca }} {{ modelo }} {{ versao }}, transcreve o áudio
-      e classifica o sentimento de cada vídeo em relação ao carro.
+      Laboratório de pipelines: busque vídeos, colete transcrições e comentários,
+      compare o dado <strong>RAW</strong>, <strong>REFINED</strong> e <strong>TRUST</strong>,
+      ajuste o prompt e transforme a configuração numa pipeline agendada.
     </p>
+  </div>
+  <div class="page__header-acoes">
+    <div class="status-backend" data-status-backend>
+      <span data-status-youtube><span class="selo selo--pendente">YouTube API</span></span>
+      <span data-status-llm><span class="selo selo--pendente">LLM</span></span>
+    </div>
+    <button type="button" class="icon-btn" data-abrir-config aria-label="Configurações do agente">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+        <path d="M12 15.2a3.2 3.2 0 100-6.4 3.2 3.2 0 000 6.4z"/>
+        <path d="M19.4 13.6a7.9 7.9 0 000-3.2l2-1.5-1.8-3.2-2.4.9a8 8 0 00-2.7-1.6L14.1 2.5H9.9l-.4 2.5a8 8 0 00-2.7 1.6l-2.4-.9-1.8 3.2 2 1.5a7.9 7.9 0 000 3.2l-2 1.5 1.8 3.2 2.4-.9a8 8 0 002.7 1.6l.4 2.5h4.2l.4-2.5a8 8 0 002.7-1.6l2.4.9 1.8-3.2-2-1.5z" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
   </div>
 </div>
 
-<div class="painel">
-  <h2 class="painel__titulo">Buscar vídeos</h2>
-  <p class="painel__legenda">Use uma palavra-chave livre ou cole o link de um vídeo específico.</p>
-
-  <form class="form-youtube" data-form-youtube>
-    <div class="campo">
-      <label for="consulta-yt">Palavra-chave ou link do vídeo</label>
-      <input type="text" id="consulta-yt" name="consulta" placeholder="ex.: review {{ marca }} {{ modelo }}">
+{# ── Busca "hero" estilo Google, com toggle de modo embutido ──────────── #}
+<div class="busca-hero">
+  <form class="busca-hero__pill" data-form-hero>
+    <div class="modo-toggle" role="radiogroup" aria-label="Modo de origem dos vídeos">
+      <button type="button" class="modo-toggle__opcao is-ativa" data-modo="busca" role="radio" aria-checked="true" aria-label="Pesquisar por palavra-chave">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button type="button" class="modo-toggle__opcao" data-modo="url" role="radio" aria-checked="false" aria-label="Colar URL de um vídeo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M9 15l6-6M10 6.5l.6-.6a3.4 3.4 0 014.9 4.7l-.6.6M14 17.5l-.6.6a3.4 3.4 0 01-4.9-4.7l.6-.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
     </div>
-    <button type="submit" class="btn btn--primario" data-botao-buscar-yt>Buscar vídeos</button>
+
+    <input type="text" class="busca-hero__input" data-hero-input
+           placeholder="Pesquisar vídeos — ex.: review {{ marca or 'Ford' }} {{ modelo or 'Territory' }} 2026"
+           value="{% if marca %}review avaliação {{ marca }} {{ modelo }} {{ versao }}{% endif %}">
+
+    <button type="button" class="busca-hero__limpar" data-hero-limpar hidden aria-label="Limpar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+    </button>
+
+    <button type="submit" class="busca-hero__botao" data-botao-buscar>Pesquisar</button>
   </form>
+
+  <details class="filtros" data-filtros>
+    <summary class="filtros__resumo">Filtros avançados</summary>
+
+    <div class="grade grade--4">
+      <div class="campo">
+        <label for="f-meses">Janela (meses)</label>
+        <input type="number" id="f-meses" data-f-meses value="6" min="1" max="120">
+      </div>
+      <div class="campo">
+        <label for="f-inicio">Data inicial</label>
+        <input type="date" id="f-inicio" data-f-inicio>
+      </div>
+      <div class="campo">
+        <label for="f-fim">Data final</label>
+        <input type="date" id="f-fim" data-f-fim>
+      </div>
+      <div class="campo">
+        <label for="f-max">Máx. de vídeos</label>
+        <input type="number" id="f-max" data-f-max value="10" min="1" max="50">
+      </div>
+
+      <div class="campo">
+        <label for="f-ordem">Ordenação da busca</label>
+        <select id="f-ordem" data-f-ordem>
+          <option value="relevance">Relevância</option>
+          <option value="date">Data</option>
+          <option value="viewCount">Visualizações</option>
+          <option value="rating">Avaliação</option>
+          <option value="title">Título</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="f-idioma">Idioma</label>
+        <select id="f-idioma" data-f-idioma>
+          <option value="pt">Português</option>
+          <option value="en">Inglês</option>
+          <option value="es">Espanhol</option>
+          <option value="">Qualquer</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="f-duracao">Duração</label>
+        <select id="f-duracao" data-f-duracao>
+          <option value="">Qualquer</option>
+          <option value="short">Curta (&lt; 4 min)</option>
+          <option value="medium">Média (4–20 min)</option>
+          <option value="long">Longa (&gt; 20 min)</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="f-canal">ID do canal</label>
+        <input type="text" id="f-canal" data-f-canal placeholder="opcional">
+      </div>
+
+      <div class="campo">
+        <label for="f-views">Mín. visualizações</label>
+        <input type="number" id="f-views" data-f-views min="0" placeholder="—">
+      </div>
+      <div class="campo">
+        <label for="f-likes">Mín. likes</label>
+        <input type="number" id="f-likes" data-f-likes min="0" placeholder="—">
+      </div>
+      <div class="campo">
+        <label for="f-coments">Mín. comentários</label>
+        <input type="number" id="f-coments" data-f-coments min="0" placeholder="—">
+      </div>
+      <div class="campo">
+        <label for="f-dur-min">Duração mín. (min)</label>
+        <input type="number" id="f-dur-min" data-f-dur-min min="0" placeholder="—">
+      </div>
+    </div>
+  </details>
 </div>
 
+{# ── Seleção de vídeos: galeria ordenável ─────────────────────────────── #}
 <div class="painel">
-  <h2 class="painel__titulo">Vídeos analisados</h2>
-  <p class="painel__legenda">Transcrição e classificação de sentimento de cada review encontrado.</p>
-
-  <div data-resultado-youtube>
-    <div class="vazio">
-      <strong>Nenhuma busca realizada ainda</strong>
-      Busque vídeos acima para ver a transcrição e o sentimento de cada review.
+  <div class="painel__cabecalho">
+    <div>
+      <h2 class="painel__titulo">1 · Seleção de vídeos</h2>
+      <p class="painel__legenda" data-resumo-selecao>Nenhum vídeo carregado ainda.</p>
     </div>
+    <div class="painel__acoes">
+      <label class="campo-inline">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M6 8h12M6 12h8M6 16h4" stroke-linecap="round"/></svg>
+        <select data-ordenar-galeria aria-label="Ordenar vídeos por">
+          <option value="relevancia">Relevância</option>
+          <option value="views">Mais visualizações</option>
+          <option value="likes">Mais curtidas</option>
+          <option value="comentarios">Mais comentários</option>
+          <option value="recentes">Mais recentes</option>
+          <option value="duracao">Maior duração</option>
+        </select>
+      </label>
+      <button type="button" class="btn btn--linha btn--pequeno" data-selecionar-todos>Selecionar todos</button>
+      <button type="button" class="btn btn--linha btn--pequeno" data-limpar-selecao>Limpar</button>
+    </div>
+  </div>
+
+  <div data-lista-videos>
+    <div class="vazio">
+      <strong>Nenhum vídeo carregado</strong>
+      Pesquise acima ou cole a URL de um vídeo para começar.
+    </div>
+  </div>
+
+  <div class="descartados" data-descartados hidden></div>
+</div>
+
+{# ── Prompts ───────────────────────────────────────────────────────────── #}
+<div class="painel">
+  <div class="painel__cabecalho">
+    <div>
+      <h2 class="painel__titulo">2 · Análises de IA</h2>
+      <p class="painel__legenda">
+        Crie prompts, salve-os e escolha quais rodam nesta pipeline. O prompt define
+        o que é extraído — nada é fixo no código.
+      </p>
+    </div>
+    <button type="button" class="btn btn--linha btn--pequeno" data-novo-prompt>Novo prompt</button>
+  </div>
+
+  <div class="prompts">
+    <div class="prompts__lista">
+      <p class="rotulo-secao">Prompts salvos</p>
+      <div data-lista-prompts>
+        <div class="vazio vazio--compacto">Nenhum prompt salvo.</div>
+      </div>
+    </div>
+
+    <form class="prompts__editor" data-form-prompt>
+      <p class="rotulo-secao" data-titulo-editor>Novo prompt</p>
+
+      <div class="campo">
+        <label for="p-nome">Nome da análise</label>
+        <input type="text" id="p-nome" data-p-nome placeholder="ex.: Percepção sobre o carro" required>
+      </div>
+
+      <div class="campo">
+        <label for="p-desc">Descrição</label>
+        <input type="text" id="p-desc" data-p-desc placeholder="opcional">
+      </div>
+
+      <div class="campo">
+        <label for="p-texto">Prompt</label>
+        <textarea id="p-texto" data-p-texto rows="9" required
+placeholder="Analise o texto e extraia as percepções sobre o carro.
+
+Categorize em: velocidade, design, conforto, acabamento, tecnologia,
+dirigibilidade e consumo.
+
+Para cada categoria, informe a percepção e as evidências (trechos citados).
+Retorne JSON estruturado."></textarea>
+      </div>
+
+      <div class="grade grade--2">
+        <div class="campo">
+          <label for="p-entrada">Dado de entrada</label>
+          <select id="p-entrada" data-p-entrada>
+            <option value="transcript">Tabela de Transcrições (por vídeo)</option>
+            <option value="comments">Tabela de Comentários (por vídeo)</option>
+            <option value="video">Transcrição + Comentários (por vídeo)</option>
+            <option value="dataset">Tabela de Vídeos completa (uma chamada)</option>
+          </select>
+          <p class="campo__ajuda" data-p-entrada-ajuda></p>
+        </div>
+        <div class="campo">
+          <label for="p-formato">Formato de saída</label>
+          <select id="p-formato" data-p-formato>
+            <option value="json">JSON</option>
+            <option value="text">Texto</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="p-schema">Output schema (JSON, opcional)</label>
+        <textarea id="p-schema" data-p-schema rows="3"
+                  placeholder='{"velocidade": {"percepcao": "string", "evidencias": ["string"]}}'></textarea>
+      </div>
+
+      <div class="prompts__acoes">
+        <button type="submit" class="btn btn--primario" data-salvar-prompt>Salvar prompt</button>
+        <button type="button" class="btn btn--linha" data-cancelar-prompt hidden>Cancelar edição</button>
+        <span class="aviso" data-aviso-prompt></span>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Execução ──────────────────────────────────────────────────────────── #}
+<div class="painel">
+  <div class="painel__cabecalho">
+    <div>
+      <h2 class="painel__titulo">3 · Execução</h2>
+      <p class="painel__legenda">
+        A coleta roda em segundo plano; cada etapa reporta o próprio status.
+      </p>
+    </div>
+    <div class="painel__acoes">
+      <button type="button" class="btn btn--primario" data-executar>Executar pipeline</button>
+      <button type="button" class="btn btn--linha" data-gerar-pipeline disabled>Gerar pipeline</button>
+    </div>
+  </div>
+
+  <ol class="trilho" data-trilho>
+    <li class="vazio vazio--compacto">Nenhuma execução iniciada.</li>
+  </ol>
+
+  <div class="aviso aviso--bloco" data-aviso-execucao hidden></div>
+</div>
+
+{# ── RAW | REFINED | TRUST ────────────────────────────────────────────── #}
+<div class="painel">
+  <div class="painel__cabecalho">
+    <div>
+      <h2 class="painel__titulo">4 · Camadas de dado</h2>
+      <p class="painel__legenda">
+        RAW é o retorno original das APIs. REFINED é tratamento determinístico —
+        e já nasce como tabela, com o dado do canal embutido. TRUST é a
+        interpretação do agente.
+      </p>
+    </div>
+    <div class="painel__acoes">
+      <div class="modo-visualizacao" role="radiogroup" aria-label="Modo de visualização dos dados">
+        <button type="button" class="modo-visualizacao__opcao is-ativa" data-visual="cartoes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3.5" y="3.5" width="7" height="7" rx="1.3"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.3"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.3"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.3"/></svg>
+          Cartões
+        </button>
+        <button type="button" class="modo-visualizacao__opcao" data-visual="tabela">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><path d="M3.5 9.5h17M9 9.5V19.5" stroke-linecap="round"/></svg>
+          Tabela
+        </button>
+      </div>
+      <label class="alternador">
+        <input type="checkbox" data-ver-json>
+        <span>Ver JSON bruto</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="abas abas--camadas" role="tablist">
+    <button type="button" class="aba is-ativa" data-camada="raw" role="tab">RAW</button>
+    <button type="button" class="aba" data-camada="refined" role="tab">REFINED</button>
+    <button type="button" class="aba" data-camada="trust" role="tab">TRUST</button>
+  </div>
+
+  <div class="camada" data-painel-camada="raw">
+    <div class="vazio vazio--compacto">Execute a pipeline para inspecionar os dados originais.</div>
+  </div>
+  <div class="camada" data-painel-camada="refined" hidden>
+    <div class="vazio vazio--compacto">Execute a pipeline para ver os dados normalizados.</div>
+  </div>
+  <div class="camada" data-painel-camada="trust" hidden>
+    <div class="vazio vazio--compacto">Execute a pipeline com ao menos um prompt selecionado.</div>
+  </div>
+</div>
+
+{# ── Modal: configurações do agente ───────────────────────────────────── #}
+<div class="modal" data-modal-config hidden>
+  <div class="modal__caixa modal__caixa--estreita" role="dialog" aria-modal="true" aria-labelledby="modal-config-titulo">
+    <div class="modal__cabecalho">
+      <h2 class="painel__titulo" id="modal-config-titulo">Configurações do agente</h2>
+      <button type="button" class="icon-btn icon-btn--pequeno" data-fechar-config aria-label="Fechar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="campo">
+      <label for="llm-provider">Provider de LLM</label>
+      <select id="llm-provider" data-llm-provider></select>
+    </div>
+    <div class="campo">
+      <label for="llm-model">Modelo</label>
+      <input type="text" id="llm-model" data-llm-model placeholder="padrão do provider">
+    </div>
+    <div class="campo">
+      <label for="llm-temp">Temperatura</label>
+      <input type="number" id="llm-temp" data-llm-temp value="0" min="0" max="2" step="0.1">
+    </div>
+
+    <div class="modal__acoes">
+      <button type="button" class="btn btn--primario" data-fechar-config>Concluído</button>
+    </div>
+  </div>
+</div>
+
+{# ── Modal: gerar pipeline ───────────────────────────────────────────── #}
+<div class="modal" data-modal-pipeline hidden>
+  <div class="modal__caixa" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+    <h2 class="painel__titulo" id="modal-titulo">Gerar pipeline</h2>
+    <p class="painel__legenda">
+      Replica toda a configuração do Playground — filtros, prompts e agente —
+      numa pipeline versionada, pronta para agendar e virar DAG do Airflow.
+    </p>
+
+    <form data-form-pipeline-nova>
+      <p class="rotulo-secao">Identificação</p>
+      <div class="campo">
+        <label for="pl-nome">Nome</label>
+        <input type="text" id="pl-nome" data-pl-nome required
+               placeholder="ex.: Análise {{ marca or 'Ford' }} {{ modelo or 'Territory' }}">
+      </div>
+      <div class="campo">
+        <label for="pl-desc">Descrição</label>
+        <input type="text" id="pl-desc" data-pl-desc placeholder="opcional">
+      </div>
+
+      <p class="rotulo-secao rotulo-secao--espacada">Fonte</p>
+      <div class="fonte-toggle" role="radiogroup" aria-label="Fonte dos vídeos da pipeline">
+        <label class="fonte-toggle__opcao">
+          <input type="radio" name="pl-fonte" value="dinamica" data-pl-fonte checked>
+          <span>
+            <strong>Fonte dinâmica</strong>
+            Faz uma busca nova a cada execução agendada, usando os filtros abaixo.
+          </span>
+        </label>
+        <label class="fonte-toggle__opcao">
+          <input type="radio" name="pl-fonte" value="fixa" data-pl-fonte>
+          <span>
+            <strong>Fonte fixa</strong>
+            Sempre reprocessa os vídeos já selecionados no Playground agora.
+          </span>
+        </label>
+      </div>
+
+      <div data-pl-fonte-fixa-resumo class="fonte-fixa-resumo" hidden>
+        <p class="campo__ajuda">Vídeos que serão fixados nesta pipeline:</p>
+        <ul data-pl-fonte-fixa-lista></ul>
+      </div>
+
+      <div data-pl-filtros>
+        <div class="campo">
+          <label for="pl-query">Termo de busca</label>
+          <input type="text" id="pl-query" data-pl-query placeholder="ex.: review Ford Territory 2026">
+        </div>
+        <div class="grade grade--4">
+          <div class="campo">
+            <label for="pl-f-meses">Janela (meses)</label>
+            <input type="number" id="pl-f-meses" data-pl-f-meses min="1" max="120">
+          </div>
+          <div class="campo">
+            <label for="pl-f-max">Máx. de vídeos</label>
+            <input type="number" id="pl-f-max" data-pl-f-max min="1" max="50">
+          </div>
+          <div class="campo">
+            <label for="pl-f-ordem">Ordenação</label>
+            <select id="pl-f-ordem" data-pl-f-ordem>
+              <option value="relevance">Relevância</option>
+              <option value="date">Data</option>
+              <option value="viewCount">Visualizações</option>
+              <option value="rating">Avaliação</option>
+              <option value="title">Título</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="pl-f-idioma">Idioma</label>
+            <select id="pl-f-idioma" data-pl-f-idioma>
+              <option value="pt">Português</option>
+              <option value="en">Inglês</option>
+              <option value="es">Espanhol</option>
+              <option value="">Qualquer</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="pl-f-duracao">Duração</label>
+            <select id="pl-f-duracao" data-pl-f-duracao>
+              <option value="">Qualquer</option>
+              <option value="short">Curta</option>
+              <option value="medium">Média</option>
+              <option value="long">Longa</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="pl-f-canal">ID do canal</label>
+            <input type="text" id="pl-f-canal" data-pl-f-canal placeholder="opcional">
+          </div>
+          <div class="campo">
+            <label for="pl-f-views">Mín. views</label>
+            <input type="number" id="pl-f-views" data-pl-f-views min="0" placeholder="—">
+          </div>
+          <div class="campo">
+            <label for="pl-f-likes">Mín. likes</label>
+            <input type="number" id="pl-f-likes" data-pl-f-likes min="0" placeholder="—">
+          </div>
+          <div class="campo">
+            <label for="pl-f-coments">Mín. comentários</label>
+            <input type="number" id="pl-f-coments" data-pl-f-coments min="0" placeholder="—">
+          </div>
+          <div class="campo">
+            <label for="pl-f-dur-min">Duração mín. (min)</label>
+            <input type="number" id="pl-f-dur-min" data-pl-f-dur-min min="0" placeholder="—">
+          </div>
+        </div>
+      </div>
+
+      <p class="rotulo-secao rotulo-secao--espacada">Análises de IA</p>
+      <div class="chips" data-pl-prompts-resumo>
+        <span class="vazio vazio--compacto">Nenhum prompt selecionado na tela.</span>
+      </div>
+
+      <p class="rotulo-secao rotulo-secao--espacada">Agente (LLM)</p>
+      <div class="grade grade--3">
+        <div class="campo">
+          <label for="pl-llm-provider">Provider</label>
+          <select id="pl-llm-provider" data-pl-llm-provider></select>
+        </div>
+        <div class="campo">
+          <label for="pl-llm-model">Modelo</label>
+          <input type="text" id="pl-llm-model" data-pl-llm-model placeholder="padrão do provider">
+        </div>
+        <div class="campo">
+          <label for="pl-llm-temp">Temperatura</label>
+          <input type="number" id="pl-llm-temp" data-pl-llm-temp min="0" max="2" step="0.1">
+        </div>
+      </div>
+
+      <p class="rotulo-secao rotulo-secao--espacada">Agenda</p>
+      <div class="grade grade--2">
+        <div class="campo">
+          <label for="pl-agenda">Frequência</label>
+          <select id="pl-agenda" data-pl-agenda>
+            <option value="manual">Manual</option>
+            <option value="hourly">A cada hora</option>
+            <option value="daily" selected>Diária</option>
+            <option value="weekly">Semanal</option>
+            <option value="monthly">Mensal</option>
+            <option value="cron">Cron</option>
+          </select>
+        </div>
+        <div class="campo" data-campo-hora>
+          <label for="pl-hora">Horário</label>
+          <input type="time" id="pl-hora" data-pl-hora value="08:00">
+        </div>
+        <div class="campo" data-campo-cron hidden>
+          <label for="pl-cron">Expressão cron</label>
+          <input type="text" id="pl-cron" data-pl-cron placeholder="0 8 * * *">
+        </div>
+      </div>
+
+      <div class="modal__acoes">
+        <button type="button" class="btn btn--linha" data-fechar-modal>Cancelar</button>
+        <button type="submit" class="btn btn--primario" data-confirmar-pipeline>Criar pipeline</button>
+      </div>
+      <span class="aviso" data-aviso-modal></span>
+    </form>
   </div>
 </div>
 

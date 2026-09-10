@@ -94,14 +94,14 @@
     <a href="{{ url_for('pipeline', marca=marca, modelo=modelo, versao=versao) }}"
        class="sidebar__item {{ 'is-ativo' if request.endpoint == 'pipeline' }}"
        style="--item-accent: var(--accent-pipeline)"
-       data-rotulo="Pipeline">
+       data-rotulo="Pipelines">
       <span class="sidebar__item-icone">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
           <circle cx="5" cy="6" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="18" r="2"/>
           <path d="M7 6h6a4 4 0 014 4M7 18h6a4 4 0 004-4" stroke-linecap="round"/>
         </svg>
       </span>
-      <span class="sidebar__item-texto">Pipeline</span>
+      <span class="sidebar__item-texto">Pipelines</span>
     </a>
 
     <a href="{{ url_for('compare', marca=marca, modelo=modelo, versao=versao) }}"

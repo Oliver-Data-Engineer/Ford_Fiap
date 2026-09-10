@@ -4,43 +4,60 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Consulta de Veículos</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='shared/base.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='busca/style.css') }}">
 </head>
 <body>
 
-  <main class="painel">
-    <header class="painel__cabecalho">
-      <h1>Consulta de veículos</h1>
-      <p>Escolha a marca, depois o modelo, depois a versão.</p>
-    </header>
-
-    <div class="campo">
-      <label for="marca">Marca</label>
-      <select id="marca">
-        <option value="">Selecione a marca</option>
-      </select>
+  <div class="tela-busca">
+    <div class="marca-app">
+      <span class="marca-app__selo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 12h4l2-6h6l2 6h4M5 12v5h14v-5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="8" cy="17.5" r="1.6"/>
+          <circle cx="16" cy="17.5" r="1.6"/>
+        </svg>
+      </span>
+      <span class="marca-app__nome">Painel do veículo</span>
     </div>
 
-    <div class="campo">
-      <label for="modelo">Modelo</label>
-      <select id="modelo" disabled>
-        <option value="">Selecione a marca primeiro</option>
-      </select>
-    </div>
+    <main class="painel painel--busca">
+      <header class="painel__cabecalho">
+        <h1>Consulta de veículos</h1>
+        <p>Escolha a marca, depois o modelo, depois a versão para começar.</p>
+      </header>
 
-    <div class="campo">
-      <label for="versao">Versão</label>
-      <select id="versao" disabled>
-        <option value="">Selecione o modelo primeiro</option>
-      </select>
-    </div>
+      <div class="campo">
+        <label for="marca">Marca</label>
+        <select id="marca">
+          <option value="">Selecione a marca</option>
+        </select>
+      </div>
 
-    <p id="mensagem" class="mensagem" aria-live="polite"></p>
+      <div class="campo">
+        <label for="modelo">Modelo</label>
+        <select id="modelo" disabled>
+          <option value="">Selecione a marca primeiro</option>
+        </select>
+      </div>
 
-    <button id="botaoBuscar" class="botao-buscar" type="button" hidden>
-      Buscar
-    </button>
-  </main>
+      <div class="campo">
+        <label for="versao">Versão</label>
+        <select id="versao" disabled>
+          <option value="">Selecione o modelo primeiro</option>
+        </select>
+      </div>
+
+      <p id="mensagem" class="mensagem" aria-live="polite"></p>
+
+      <button id="botaoBuscar" class="btn btn--primario botao-buscar" type="button" hidden>
+        Buscar
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </main>
+  </div>
 
   <script src="{{ url_for('static', filename='busca/script.js') }}"></script>
 </body>

@@ -1,51 +1,253 @@
-.form-pipeline {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 14px;
-  align-items: end;
+/* ============================================================
+   ABA PIPELINES — lista, agenda, execuções e código da DAG
+   ============================================================ */
+
+.painel__cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
 }
+
+.painel__cabecalho .painel__legenda { margin-bottom: 0; }
+
+.btn--pequeno { padding: 6px 11px; font-size: 12.5px; }
+
+.rotulo-secao {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 0 0 10px;
+}
+
+/* ---------- item de pipeline ---------- */
 
 .lista-pipelines {
   display: flex;
   flex-direction: column;
+  gap: 10px;
 }
 
-.pipeline-item {
+.pipeline-card {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.pipeline-card__topo {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 18px;
+  align-items: center;
+  padding: 15px 16px;
+}
+
+.pipeline-card__nome {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 4px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 13px 4px;
-  border-bottom: 1px solid var(--hairline);
+  gap: 9px;
+  flex-wrap: wrap;
 }
 
-.pipeline-item:last-child { border-bottom: none; }
-
-.pipeline-item__modo {
-  font-size: 13.5px;
-  font-weight: 500;
-  margin: 0 0 3px;
-}
-
-.pipeline-item__frequencia {
-  font-size: 12px;
+.pipeline-card__descricao {
+  font-size: 12.5px;
   color: var(--text-muted);
   margin: 0;
+  line-height: 1.5;
 }
 
-.pipeline-item__proxima {
+.pipeline-card__meta {
+  display: flex;
+  gap: 6px 16px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.versao {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 100px;
+  padding: 1px 7px;
+}
+
+.dado-rotulado {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.dado-rotulado strong {
+  display: block;
   font-family: var(--font-mono);
   font-size: 12px;
+  font-weight: 500;
   color: var(--text-muted);
-  text-align: right;
+  margin-top: 2px;
 }
 
-.pipeline-item__acoes {
+.pipeline-card__acoes {
   display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* ---------- seções dobráveis do card ---------- */
+
+.dobra {
+  border-top: 1px solid var(--hairline);
+}
+
+.dobra__resumo {
+  padding: 11px 16px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-@media (max-width: 700px) {
-  .form-pipeline { grid-template-columns: 1fr; }
-  .pipeline-item { flex-wrap: wrap; }
+.dobra__resumo::-webkit-details-marker { display: none; }
+
+.dobra__resumo::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid var(--text-faint);
+  border-bottom: 1.5px solid var(--text-faint);
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+
+.dobra[open] > .dobra__resumo::before { transform: rotate(45deg); }
+.dobra[open] > .dobra__resumo { color: var(--text-primary); }
+
+.dobra__corpo { padding: 0 16px 16px; }
+
+/* ---------- código da DAG ---------- */
+
+.dag-barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.dag-caminho {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.dag-acoes { display: flex; gap: 8px; }
+
+.codigo {
+  background: var(--bg-base);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin: 0;
+  max-height: 460px;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--text-muted);
+  white-space: pre;
+  tab-size: 4;
+}
+
+/* Realce de sintaxe mínimo, aplicado pelo script */
+.codigo .tk-kw { color: var(--accent-x); }
+.codigo .tk-str { color: var(--ok); }
+.codigo .tk-com { color: var(--text-faint); font-style: italic; }
+.codigo .tk-num { color: var(--warn); }
+.codigo .tk-dec { color: var(--accent-compare); }
+
+/* ---------- histórico de execuções ---------- */
+
+.tabela-runs {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.tabela-runs th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding: 7px 9px;
+  border-bottom: 1px solid var(--hairline-strong);
+}
+
+.tabela-runs td {
+  padding: 9px;
+  border-bottom: 1px solid var(--hairline);
+  vertical-align: top;
+}
+
+.tabela-runs tr:last-child td { border-bottom: none; }
+
+.tabela-runs .mono {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.etapas-inline {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.etapa-ponto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--hairline-strong);
+  margin-top: 5px;
+}
+
+.etapa-ponto--success { background: var(--ok); }
+.etapa-ponto--failed { background: var(--danger); }
+.etapa-ponto--running { background: var(--warn); }
+.etapa-ponto--skipped { background: var(--hairline-strong); opacity: 0.5; }
+
+/* ---------- avisos ---------- */
+
+.aviso {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.aviso--erro { color: var(--danger); }
+.aviso--ok { color: var(--ok); }
+
+.aviso--linha {
+  display: block;
+  margin-top: 10px;
+}
+
+.vazio--compacto { padding: 22px 14px; font-size: 13px; }
+
+@media (max-width: 860px) {
+  .pipeline-card__topo { grid-template-columns: 1fr; }
+  .pipeline-card__acoes { justify-content: flex-start; }
+  .painel__cabecalho { flex-direction: column; }
+  .page__header { flex-direction: column; align-items: stretch; gap: 14px; }
 }

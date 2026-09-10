@@ -1,132 +1,104 @@
-:root {
-  --bg: #14161a;
-  --painel-bg: #1d2026;
-  --texto: #e9eaec;
-  --texto-fraco: #9096a1;
-  --linha: #2c3038;
-  --acento: #ff5a36;
-  --acento-fraco: rgba(255, 90, 54, 0.15);
-}
+/* ============================================================
+   BUSCA — tela de entrada (seleção marca → modelo → versão)
+   Usa os tokens de shared/base.css; sem paleta própria.
+   ============================================================ */
 
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
+.tela-busca {
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 15% 15%, color-mix(in srgb, var(--accent-home) 6%, transparent), transparent 45%),
+    radial-gradient(circle at 85% 85%, color-mix(in srgb, var(--accent-home) 5%, transparent), transparent 45%);
+}
+
+.marca-app {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.marca-app__selo {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--accent-home);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg);
-  color: var(--texto);
-  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-  padding: 24px;
 }
 
-.painel {
+.marca-app__selo svg { width: 19px; height: 19px; }
+
+.marca-app__nome {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.painel--busca {
   width: 100%;
   max-width: 420px;
-  background: var(--painel-bg);
-  border: 1px solid var(--linha);
-  border-radius: 10px;
-  padding: 32px 28px;
+  padding: 34px 30px;
 }
 
 .painel__cabecalho h1 {
-  font-size: 1.4rem;
+  font-size: 22px;
+  font-weight: 600;
   margin: 0 0 6px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.2px;
 }
 
 .painel__cabecalho p {
-  margin: 0 0 28px;
-  color: var(--texto-fraco);
-  font-size: 0.9rem;
+  margin: 0 0 26px;
+  color: var(--text-muted);
+  font-size: 13.5px;
+  line-height: 1.5;
 }
 
-.campo {
-  margin-bottom: 18px;
-}
-
-.campo label {
-  display: block;
-  font-size: 0.85rem;
-  color: var(--texto-fraco);
-  margin-bottom: 6px;
-}
+.campo { margin-bottom: 16px; }
 
 .campo select {
   width: 100%;
-  padding: 10px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--linha);
-  background: var(--bg);
-  color: var(--texto);
-  font-size: 0.95rem;
   appearance: none;
-  background-image: linear-gradient(45deg, transparent 50%, var(--texto-fraco) 50%),
-    linear-gradient(135deg, var(--texto-fraco) 50%, transparent 50%);
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-faint) 50%),
+    linear-gradient(135deg, var(--text-faint) 50%, transparent 50%);
   background-position: calc(100% - 18px) center, calc(100% - 13px) center;
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
-  transition: border-color 0.15s ease;
-}
-
-.campo select:focus-visible {
-  outline: 2px solid var(--acento);
-  outline-offset: 1px;
-  border-color: var(--acento);
 }
 
 .campo select:disabled {
-  opacity: 0.45;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .mensagem {
   min-height: 20px;
-  margin: 20px 0 0;
+  margin: 18px 0 0;
   padding: 12px 14px;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  color: var(--acento);
-  background: var(--acento-fraco);
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
   display: none;
 }
 
-.mensagem.visivel {
-  display: block;
-}
+.mensagem.visivel { display: block; }
 
 .botao-buscar {
   width: 100%;
+  justify-content: center;
   margin-top: 20px;
-  padding: 12px 14px;
-  border: none;
-  border-radius: 6px;
-  background: var(--acento);
-  color: #14161a;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: filter 0.15s ease;
 }
 
-.botao-buscar:hover {
-  filter: brightness(1.08);
-}
-
-.botao-buscar:active {
-  filter: brightness(0.95);
-}
-
-.botao-buscar[hidden] {
-  display: none;
-}
+.botao-buscar[hidden] { display: none; }
 
 @media (max-width: 480px) {
-  .painel {
-    padding: 24px 20px;
-  }
+  .painel--busca { padding: 26px 20px; }
 }
