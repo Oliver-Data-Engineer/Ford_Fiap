@@ -380,10 +380,13 @@ class PipelineEngine:
         coletados = await asyncio.gather(*(buscar(v) for v in ids))
 
         indisponiveis: list[str] = []
+        bloqueados: list[str] = []
         dependencia_ausente = False
         for vid, dado in coletados:
             if isinstance(dado, TranscriptError):
                 indisponiveis.append(vid)
+                if dado.motivo == "blocked":
+                    bloqueados.append(vid)
                 dependencia_ausente = dependencia_ausente or dado.motivo == "missing_dependency"
             else:
                 contexto["raw"]["transcripts"][vid] = dado
@@ -399,10 +402,21 @@ class PipelineEngine:
             return
 
         detalhe = f"{obtidas}/{len(ids)} transcrição(ões) obtida(s)"
-        if indisponiveis:
-            detalhe += f" — sem legenda: {', '.join(indisponiveis[:5])}"
-            if len(indisponiveis) > 5:
-                detalhe += f" (+{len(indisponiveis) - 5})"
+
+        # "Bloqueado" é o YouTube recusando por volume/IP — nada a ver com o
+        # vídeo em si. Separar isso de "sem legenda" evita que o usuário
+        # perca tempo revisando vídeos que na verdade têm legenda normal.
+        if bloqueados:
+            detalhe += (
+                f" — YouTube bloqueou {len(bloqueados)} requisição(ões) de transcrição "
+                "(limite de IP/volume; tente novamente mais tarde ou com menos vídeos por vez)"
+            )
+        sem_legenda = [v for v in indisponiveis if v not in bloqueados]
+        if sem_legenda:
+            detalhe += f" — sem legenda: {', '.join(sem_legenda[:5])}"
+            if len(sem_legenda) > 5:
+                detalhe += f" (+{len(sem_legenda) - 5})"
+
         resultado.concluir(detalhe)
 
     async def _passo_comentarios(self, passo, contexto, run, resultado) -> None:

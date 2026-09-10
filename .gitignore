@@ -11,5 +11,8 @@ service-account*.json
 # Dados persistidos pelo Playground (prompts, pipelines, execuções)
 data/
 
+# DAGs geradas pela aplicação — regeneráveis, não são código-fonte
+airflow/dags/*.py
+
 # CSVs gerados pelos notebooks
 *.csv

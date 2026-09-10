@@ -90,6 +90,30 @@ class Settings:
     def youtube_api_key(self) -> str | None:
         return os.getenv("YOUTUBE_API_KEY") or None
 
+    @property
+    def youtube_proxy_list_path(self) -> str | None:
+        """
+        Caminho de um CSV `host:porta:usuario:senha` (uma linha por proxy)
+        usado para contornar bloqueios de IP na coleta de transcrições.
+        Opcional — sem ele, a coleta roda normalmente sem proxy. Ignorado se
+        as credenciais nativas da Webshare (abaixo) estiverem configuradas.
+        """
+        return os.getenv("YOUTUBE_PROXY_LIST") or None
+
+    @property
+    def youtube_webshare_credenciais(self) -> tuple[str, str] | None:
+        """
+        "Proxy Username"/"Proxy Password" da conta Webshare
+        (dashboard.webshare.io/proxy/settings) — usa o gateway rotativo
+        nativo da biblioteca (`WebshareProxyConfig`), que já tem retentativa
+        embutida. Requer o pacote "Residential"; "Proxy Server"/"Static
+        Residential"/gratuito não funcionam de forma confiável para isto.
+        Tem prioridade sobre `YOUTUBE_PROXY_LIST` quando ambos estão setados.
+        """
+        usuario = os.getenv("YOUTUBE_WEBSHARE_USERNAME")
+        senha = os.getenv("YOUTUBE_WEBSHARE_PASSWORD")
+        return (usuario, senha) if usuario and senha else None
+
     # ── LLM ──────────────────────────────────────────────────────────────────
 
     @property

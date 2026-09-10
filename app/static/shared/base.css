@@ -54,6 +54,13 @@
 
 * { box-sizing: border-box; }
 
+/* O reset padrão do navegador para [hidden] tem prioridade muito baixa (UA
+   stylesheet) — qualquer classe de autor que declare `display` no mesmo
+   elemento o sobrescreve, deixando "hidden" visível. Isso garante que
+   `el.hidden = true` sempre esconda, não importa quais outras classes o
+   elemento tenha. */
+[hidden] { display: none !important; }
+
 html, body {
   margin: 0;
   padding: 0;

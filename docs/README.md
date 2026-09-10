@@ -115,7 +115,8 @@ Ford_Fiap/
 └── docs/                        # Documentação do projeto
     ├── README.md                # Este arquivo
     ├── api.md                   # Documentação completa da API de specs
-    ├── youtube_pipeline.md      # Playground, agente LLM, pipelines e DAGs
+    ├── youtube_pipeline.md      # Playground, agente LLM, pipelines e DAGs (guia de uso)
+    ├── SPEC.md                  # Arquitetura, decisões e estado atual (continuidade p/ próximas sessões)
     └── setup.md                 # Guia de instalação e execução local
 ```
 
@@ -166,6 +167,7 @@ de dados oficiais.
 |---|---|
 | [api.md](./api.md) | Endpoints da API de especificações, parâmetros e exemplos |
 | [youtube_pipeline.md](./youtube_pipeline.md) | Playground, camadas RAW/REFINED/TRUST, agente LLM, pipelines e DAGs |
+| [SPEC.md](./SPEC.md) | Arquitetura, decisões de design e estado atual — leia antes de mexer no código |
 | [setup.md](./setup.md) | Instalação do ambiente, dependências e execução local passo a passo |
 
 ---
