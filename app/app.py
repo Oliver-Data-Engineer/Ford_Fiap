@@ -69,6 +69,11 @@ def pipeline():
     return render_template("pipeline/index.html", **veiculo_selecionado())
 
 
+@app.route("/analytics")
+def analytics():
+    return render_template("analytics/index.html", **veiculo_selecionado())
+
+
 @app.route("/compare")
 def compare():
     return render_template("compare/index.html", **veiculo_selecionado())
@@ -184,11 +189,6 @@ def api_proxy(caminho: str):
 @app.route("/x/executar", methods=["POST"])
 def x_executar():
     return jsonify({"mencoes": []})
-
-
-@app.route("/gov/consultar", methods=["POST"])
-def gov_consultar():
-    return jsonify({"dados": None})
 
 
 @app.route("/compare/rodar", methods=["POST"])

@@ -9,37 +9,36 @@ chamadas são despachadas para uma thread para não travar o event loop.
 A resposta devolvida preserva os segmentos originais (texto + start +
 duration); juntar tudo num bloco de texto é trabalho da camada REFINED.
 
-Duas estratégias de proxy, mutuamente exclusivas (Webshare nativo tem
-prioridade quando ambas estão configuradas):
+Proxy é FALLBACK, não padrão: toda busca tenta direto primeiro (rápido, e
+cobre a maioria dos vídeos — a maior parte não está bloqueada). Só quando o
+YouTube responde com RequestBlocked/IpBlocked é que o proxy entra em jogo —
+isso evita pagar a latência de um proxy residencial em toda requisição só
+para o caso raro de bloqueio. Duas estratégias de proxy, mutuamente
+exclusivas (Webshare nativo tem prioridade quando ambas configuradas):
 
   • Webshare nativo (`YOUTUBE_WEBSHARE_USERNAME`/`_PASSWORD`) — usa
     `WebshareProxyConfig`, que fala com o gateway rotativo da Webshare
-    (`p.webshare.io`) e já tem retentativa embutida. Só funciona de verdade
-    com o pacote "Residential" da Webshare — "Proxy Server"/"Static
-    Residential"/gratuito continuam bloqueados pelo YouTube mesmo passando
-    por aqui (a própria biblioteca detecta e explica isso no erro).
-  • Lista estática (`YOUTUBE_PROXY_LIST`) — um CSV de proxies fixos
-    (`host:porta:usuario:senha`); a rotação e a retentativa entre eles são
-    feitas aqui mesmo, via `GenericProxyConfig`.
+    (`p.webshare.io`) e já tem retentativa embutida.
+  • Lista (`YOUTUBE_PROXY_LIST_URL`/`YOUTUBE_PROXY_LIST`) — rotação e
+    retentativa próprias, via `GenericProxyConfig`.
 """
 import asyncio
 import logging
-from typing import Any
+from typing import Any, Callable
 
 from src.config import settings
-from src.youtube.proxy_pool import ProxyPool
+from src.youtube.proxy_pool import ProxyPool, resolver_pool_padrao
 
 logger = logging.getLogger(__name__)
 
 # Ordem de preferência de idioma ao escolher a transcrição disponível
 IDIOMAS_PADRAO = ("pt", "pt-BR", "en")
 
-# Quantas vezes tentar de novo (com um proxy diferente a cada vez) quando o
-# YouTube bloqueia a requisição, na estratégia de lista estática. Sem sentido
-# tentar mais que o tamanho do pool — se todos os proxies levarem ao mesmo
-# bloqueio, insistir não ajuda. (A estratégia Webshare nativa tem sua própria
-# retentativa embutida em `WebshareProxyConfig.retries_when_blocked`.)
-MAX_TENTATIVAS_BLOQUEIO = 3
+# Quantas vezes tentar via proxy (um proxy diferente a cada vez) depois que a
+# tentativa direta foi bloqueada, na estratégia de lista. Sem sentido tentar
+# mais que o tamanho do pool. (Webshare nativo tem sua própria retentativa
+# embutida em `WebshareProxyConfig.retries_when_blocked` — conta como 1 aqui.)
+MAX_TENTATIVAS_PROXY = 3
 
 
 class TranscriptError(RuntimeError):
@@ -70,17 +69,16 @@ class TranscriptAPI:
             webshare_credenciais if webshare_credenciais is not None
             else settings.youtube_webshare_credenciais
         )
-        # A lista estática só entra em jogo se o Webshare nativo não estiver
-        # configurado — os dois nunca operam ao mesmo tempo.
-        self._proxy_pool = (
-            proxy_pool if proxy_pool is not None
-            else (ProxyPool.vazio() if self._webshare_credenciais else self._pool_padrao())
-        )
+        # Resolvido só se/quando a tentativa direta for bloqueada — nunca
+        # antes, para não pagar o custo de baixar a lista (via `de_url`) num
+        # vídeo que nem precisava de proxy.
+        self._proxy_pool_resolvido: ProxyPool | None = proxy_pool
 
-    @staticmethod
-    def _pool_padrao() -> ProxyPool:
-        caminho = settings.youtube_proxy_list_path
-        return ProxyPool.de_arquivo(caminho) if caminho else ProxyPool.vazio()
+    def _obter_pool(self) -> ProxyPool:
+        """Resolve e cacheia o pool — chamado só depois de um bloqueio real."""
+        if self._proxy_pool_resolvido is None:
+            self._proxy_pool_resolvido = resolver_pool_padrao()
+        return self._proxy_pool_resolvido
 
     @staticmethod
     def _importar():
@@ -113,70 +111,55 @@ class TranscriptAPI:
         return WebshareProxyConfig
 
     def _proxy_config_webshare(self):
-        """
-        `WebshareProxyConfig` fixo, reaproveitado em toda tentativa — a
-        rotação entre IPs acontece do lado do gateway da Webshare, não aqui.
-        """
         WebshareProxyConfig = self._importar_webshare_config()
         usuario, senha = self._webshare_credenciais
         return WebshareProxyConfig(proxy_username=usuario, proxy_password=senha)
+
+    def _proxy_configs_para_retentativa(self):
+        """
+        Configs de proxy a tentar, em ordem, depois que a tentativa direta
+        foi bloqueada. Lista vazia = sem proxy disponível (bloqueio é final).
+        """
+        if self._webshare_credenciais:
+            # Retentativa já é interna ao WebshareProxyConfig — uma "config"
+            # aqui já representa várias tentativas do lado do gateway.
+            return [self._proxy_config_webshare()]
+
+        pool = self._obter_pool()
+        if not pool.habilitado:
+            return []
+
+        GenericProxyConfig = self._importar_proxy_config()
+        n = min(MAX_TENTATIVAS_PROXY, len(pool))
+        return [
+            GenericProxyConfig(http_url=url, https_url=url)
+            for url in (pool.proximo() for _ in range(n))
+        ]
 
     def _buscar_sync(self, video_id: str, idiomas: tuple[str, ...]) -> dict[str, Any]:
         """Execução bloqueante — sempre chamada dentro de um worker thread."""
         YouTubeTranscriptApi = self._importar()
         RequestBlocked = self._importar_erro_bloqueio()
 
-        usando_webshare = bool(self._webshare_credenciais)
-        proxy_config_webshare = self._proxy_config_webshare() if usando_webshare else None
+        def tentar(proxy_config) -> tuple[Any, list]:
+            api = YouTubeTranscriptApi(proxy_config=proxy_config)
+            disponiveis = api.list(video_id)
+            transcricao = disponiveis.find_transcript(list(idiomas))
+            return transcricao, transcricao.fetch()
 
-        if usando_webshare:
-            # A retentativa já acontece dentro do WebshareProxyConfig
-            # (retries_when_blocked) — uma única passada aqui é suficiente.
-            tentativas = 1
-        elif self._proxy_pool.habilitado:
-            tentativas = min(MAX_TENTATIVAS_BLOQUEIO, len(self._proxy_pool))
-        else:
-            tentativas = 1
-
-        transcricao = None
-        segmentos_brutos = None
-
-        for tentativa in range(1, tentativas + 1):
-            if usando_webshare:
-                proxy_config = proxy_config_webshare
-            elif self._proxy_pool.habilitado:
-                proxy_url = self._proxy_pool.proximo()
-                GenericProxyConfig = self._importar_proxy_config()
-                proxy_config = GenericProxyConfig(http_url=proxy_url, https_url=proxy_url)
-            else:
-                proxy_config = None
-
-            try:
-                api = YouTubeTranscriptApi(proxy_config=proxy_config)
-                disponiveis = api.list(video_id)
-                transcricao = disponiveis.find_transcript(list(idiomas))
-                segmentos_brutos = transcricao.fetch()
-                break  # sucesso
-            except TranscriptError:
-                raise
-            except Exception as exc:
-                # RequestBlocked/IpBlocked é o YouTube recusando por volume/IP
-                # de datacenter — não tem relação com o vídeo em si. Só nesse
-                # caso vale trocar de proxy e tentar de novo; qualquer outro
-                # motivo (sem legenda, vídeo indisponível…) falha na hora.
-                bloqueado = isinstance(exc, RequestBlocked)
-
-                if bloqueado and tentativa < tentativas:
-                    logger.info(
-                        "[transcript] %s bloqueado na tentativa %d — tentando de novo (%d/%d)",
-                        video_id, tentativa, tentativa + 1, tentativas,
-                    )
-                    continue
-
+        try:
+            transcricao, segmentos_brutos = tentar(None)  # sempre direto primeiro
+        except Exception as exc:
+            if not isinstance(exc, RequestBlocked):
                 raise TranscriptError(
                     f"Transcrição indisponível para o vídeo {video_id}: {exc}",
-                    motivo="blocked" if bloqueado else "unavailable",
+                    motivo="unavailable",
                 ) from exc
+
+            # Só bloqueado é que justifica pagar o custo de um proxy.
+            transcricao, segmentos_brutos = self._tentar_via_proxy(
+                tentar, video_id, RequestBlocked, causa_original=exc
+            )
 
         # A lib devolve dicts em versões antigas e objetos nas novas
         segmentos: list[dict] = []
@@ -201,6 +184,43 @@ class TranscriptAPI:
             "segments": segmentos,
         }
 
+    def _tentar_via_proxy(
+        self,
+        tentar: Callable[[Any], tuple[Any, list]],
+        video_id: str,
+        RequestBlocked: type,
+        causa_original: Exception,
+    ) -> tuple[Any, list]:
+        """Escalada pós-bloqueio: tenta de novo com cada proxy disponível, em ordem."""
+        proxy_configs = self._proxy_configs_para_retentativa()
+
+        if not proxy_configs:
+            raise TranscriptError(
+                f"Transcrição indisponível para o vídeo {video_id}: {causa_original}",
+                motivo="blocked",
+            ) from causa_original
+
+        ultimo_erro: Exception = causa_original
+        for indice, proxy_config in enumerate(proxy_configs, start=1):
+            try:
+                logger.info(
+                    "[transcript] %s bloqueado direto — tentando via proxy (%d/%d)",
+                    video_id, indice, len(proxy_configs),
+                )
+                return tentar(proxy_config)
+            except Exception as exc:
+                if not isinstance(exc, RequestBlocked):
+                    raise TranscriptError(
+                        f"Transcrição indisponível para o vídeo {video_id}: {exc}",
+                        motivo="unavailable",
+                    ) from exc
+                ultimo_erro = exc
+
+        raise TranscriptError(
+            f"Transcrição indisponível para o vídeo {video_id}: {ultimo_erro}",
+            motivo="blocked",
+        ) from ultimo_erro
+
     async def get_transcript(
         self,
         video_id: str,
@@ -213,7 +233,7 @@ class TranscriptAPI:
             {"video_id", "language", "is_generated", "segments": [...]}
 
         Levanta TranscriptError quando o vídeo não tem legendas disponíveis
-        (ou quando todas as tentativas de contornar um bloqueio de IP falham).
+        (ou quando a tentativa direta e todas as de proxy são bloqueadas).
         """
         return await asyncio.to_thread(
             self._buscar_sync, video_id, idiomas or self._idiomas

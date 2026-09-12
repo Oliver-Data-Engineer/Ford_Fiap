@@ -24,8 +24,38 @@
     verJson: false,
     camada: 'raw',
     modoVisual: 'cartoes',     // 'cartoes' | 'tabela'
-    tabelas: null               // cache de GET /pipelines/runs/{id}/tables
+    tabelas: null,               // cache de GET /pipelines/runs/{id}/tables
+    visualizacaoPrompts: 'expandido'   // 'expandido' | 'compacto'
   };
+
+  // ── Persistência local (sobrevive a trocar de aba/página) ───────────────
+  // Guarda só o suficiente pra reconstruir a tela sem perder o que o
+  // usuário já tinha feito: vídeos/seleção/prompts marcados e a execução em
+  // andamento ou concluída. Sem TTL — o pedido é só "não perder ao navegar
+  // pra outra aba", não um histórico duradouro.
+  var CHAVE_CACHE = 'ford_fiap_youtube_playground';
+
+  function lerCache() {
+    try {
+      var bruto = localStorage.getItem(CHAVE_CACHE);
+      return bruto ? JSON.parse(bruto) : null;
+    } catch (e) {
+      return null; // localStorage indisponível (modo privado, quota, etc.)
+    }
+  }
+
+  function salvarCache() {
+    try {
+      localStorage.setItem(CHAVE_CACHE, JSON.stringify({
+        runId: estado.runId,
+        videos: estado.videos,
+        selecionados: estado.selecionados,
+        promptsAtivos: estado.promptsAtivos
+      }));
+    } catch (e) {
+      // localStorage indisponível — a página continua funcionando sem cache
+    }
+  }
 
   var INTERVALO_POLLING = 1500;
 
@@ -122,9 +152,19 @@
 
       $$('[data-llm-provider]').forEach(function (sel) { sel.innerHTML = opcoes; });
       $$('[data-llm-provider]')[0].dataset.info = JSON.stringify(cfg.llm.providers);
+      $$('[data-llm-provider]')[0].dataset.padrao = JSON.stringify({
+        provider: cfg.llm.provider_padrao, model: cfg.llm.model_padrao
+      });
 
       atualizarStatusLLM();
       $('[data-llm-provider]').addEventListener('change', atualizarStatusLLM);
+
+      // Modelo do .env (LLM_MODEL) pré-preenchido no campo — só na carga
+      // inicial e só quando o provider selecionado é o mesmo do .env;
+      // trocar de provider limpa o campo e volta a usar o padrão dele.
+      if (cfg.llm.model_padrao && $('[data-llm-provider]').value === cfg.llm.provider_padrao) {
+        $$('[data-llm-model]').forEach(function (el) { if (!el.value) el.value = cfg.llm.model_padrao; });
+      }
 
       return cfg;
     }).catch(function (erro) {
@@ -403,6 +443,8 @@
     $('[data-resumo-selecao]').textContent = total
       ? marcados + ' de ' + total + ' vídeo(s) selecionado(s) para a pipeline.'
       : 'Nenhum vídeo carregado ainda.';
+
+    salvarCache();
   }
 
   $('[data-selecionar-todos]').addEventListener('click', function () {
@@ -416,6 +458,30 @@
   });
 
   // ── 3. Prompts ─────────────────────────────────────────────────────────
+
+  function aplicarVisualizacaoPrompts() {
+    var container = $('[data-prompts-container]');
+    var compacto = estado.visualizacaoPrompts === 'compacto';
+    if (container) container.classList.toggle('is-compacto', compacto);
+
+    var botao = $('[data-prompts-toggle]');
+    if (botao) {
+      botao.setAttribute('aria-expanded', String(!compacto));
+      botao.title = compacto ? 'Expandir esta seção' : 'Recolher esta seção';
+    }
+  }
+
+  function expandirPrompts() {
+    if (estado.visualizacaoPrompts === 'compacto') {
+      estado.visualizacaoPrompts = 'expandido';
+      aplicarVisualizacaoPrompts();
+    }
+  }
+
+  $('[data-prompts-toggle]').addEventListener('click', function () {
+    estado.visualizacaoPrompts = estado.visualizacaoPrompts === 'compacto' ? 'expandido' : 'compacto';
+    aplicarVisualizacaoPrompts();
+  });
 
   function atualizarAjudaEntrada() {
     var tipo = $('[data-p-entrada]').value;
@@ -471,6 +537,7 @@
       check.addEventListener('change', function () {
         estado.promptsAtivos[check.dataset.promptCheck] = check.checked;
         renderPrompts();
+        salvarCache();
       });
     });
 
@@ -487,6 +554,7 @@
     var prompt = estado.prompts.filter(function (p) { return p.id === id; })[0];
     if (!prompt) return;
 
+    expandirPrompts();
     estado.editando = id;
     $('[data-titulo-editor]').textContent = 'Editando: ' + prompt.name + ' (v' + prompt.version + ')';
     $('[data-p-nome]').value = prompt.name;
@@ -513,6 +581,7 @@
   }
 
   $('[data-novo-prompt]').addEventListener('click', function () {
+    expandirPrompts();
     limparEditor();
     $('[data-p-nome]').focus();
   });
@@ -651,6 +720,7 @@
       estado.run = resposta;
       renderTrilho(resposta.steps || []);
       iniciarPolling();
+      salvarCache();
     }).catch(function (erro) {
       avisarExecucao(erro.message);
       botao.disabled = false;
@@ -698,6 +768,30 @@
       pararPolling();
       $('[data-executar]').disabled = false;
       avisarExecucao('Falha ao consultar o status: ' + erro.message);
+    });
+  }
+
+  // Restaura a execução guardada no cache local ao carregar a página — como
+  // se ela nunca tivesse saído da tela. Um run_id que não existe mais
+  // (histórico limitado a 200 execuções em store.py) é ignorado em
+  // silêncio, sem o aviso de erro que consultarRun() mostraria.
+  function restaurarRun(runId) {
+    estado.runId = runId;
+
+    api('GET', '/pipelines/runs/' + runId).then(function (run) {
+      estado.run = run;
+      renderTrilho(run.steps || []);
+
+      var terminou = ['success', 'partial', 'failed'].indexOf(run.status) !== -1;
+      if (terminou) {
+        renderCamadas();
+      } else {
+        iniciarPolling();
+      }
+    }).catch(function () {
+      estado.runId = null;
+      estado.run = null;
+      salvarCache();
     });
   }
 
@@ -956,6 +1050,16 @@
       return;
     }
 
+    var canais = dados.channels || [];
+    var tabelaCanais = tabela([
+      ['Canal', function (c) { return esc(c.nome); }],
+      ['ID do canal', function (c) { return '<span class="texto-truncado">' + esc(c.canal_id) + '</span>'; }],
+      ['Inscritos', function (c) { return numero(c.inscritos); }],
+      ['Views totais', function (c) { return numero(c.views_totais); }],
+      ['Vídeos totais', function (c) { return numero(c.videos_totais); }],
+      ['Criado em', function (c) { return data(c.criado_em); }]
+    ], canais);
+
     var tabelaVideos = tabela([
       ['Vídeo', function (v) { return '<a class="link-video" href="' + esc(v.url || '') + '" target="_blank" rel="noopener">' + esc(truncar(v.titulo, 48)) + '</a>'; }],
       ['Canal', function (v) { return esc(v.canal_nome); }],
@@ -977,21 +1081,73 @@
     ], transcricoes);
 
     var comentarios = dados.comments || [];
+    var enriquecimentoPorComentario = mapaEnriquecimento();
     var tabelaComentarios = tabela([
       ['Vídeo', function (c) { return esc(c.video_id); }],
       ['Autor', function (c) { return esc(c.autor); }],
       ['Comentário', function (c) { return '<span class="texto-truncado">' + esc(truncar(c.texto, 90)) + '</span>'; }],
       ['Likes', function (c) { return numero(c.likes); }],
-      ['Respostas', function (c) { return numero(c.respostas); }]
+      ['Respostas', function (c) { return numero(c.respostas); }],
+      ['Sentimento', function (c) { return celulaEnriquecimento(enriquecimentoPorComentario[c.comment_id], 'sentimento'); }],
+      ['Motivo', function (c) { return celulaEnriquecimento(enriquecimentoPorComentario[c.comment_id], 'motivo'); }],
+      ['Adjetivos', function (c) { return celulaEnriquecimento(enriquecimentoPorComentario[c.comment_id], 'adjetivos'); }],
+      ['Objeto', function (c) { return celulaEnriquecimento(enriquecimentoPorComentario[c.comment_id], 'objeto'); }]
     ], comentarios);
 
     alvo.innerHTML =
+      grupo('Tabela: Canais', canais.length, tabelaCanais,
+        'Um canal por linha — dado agregado dos vídeos coletados nesta execução.') +
       grupo('Tabela: Vídeos', videos.length, tabelaVideos,
         'Um vídeo por linha, com os dados do canal (inscritos, views totais) já embutidos na criação.') +
       grupo('Tabela: Transcrições', transcricoes.length, tabelaTranscricoes,
         'Dado usado por prompts do tipo Transcrição e Vídeo completo.') +
       grupo('Tabela: Comentários extraídos', comentarios.length, tabelaComentarios,
-        'Dado usado por prompts do tipo Comentários e Vídeo completo.');
+        'Dado usado por prompts do tipo Comentários e Vídeo completo — as colunas de ' +
+        'sentimento/motivo/adjetivos/objeto só vêm preenchidas para a amostra fixa (3) ' +
+        'classificada automaticamente pelo enriquecimento de comentários.');
+  }
+
+  // Enriquecimento automático de comentários (sentimento/motivo/adjetivos/
+  // objeto) roda sozinho junto da pipeline, numa amostra fixa — não precisa
+  // de um botão de teste separado. `estado.run.trust.enriquecimento_
+  // comentarios` já chega pronto no polling normal da execução
+  // (ver src/analytics/enrichment.py / engine.py::_passo_enriquecimento_comentarios).
+  var SELO_POR_SENTIMENTO = {
+    positivo: 'selo--positivo', negativo: 'selo--negativo',
+    neutro: 'selo--neutro', misto: 'selo--misto'
+  };
+
+  function seloSentimento(sentimento) {
+    var classe = SELO_POR_SENTIMENTO[(sentimento || '').toLowerCase()] || 'selo--neutro';
+    return '<span class="selo ' + classe + '">' + esc(sentimento || '—') + '</span>';
+  }
+
+  function chipsAdjetivos(adjetivos) {
+    if (!adjetivos || !adjetivos.length) return '<span class="texto-faint">—</span>';
+    return adjetivos.map(function (a) { return '<span class="chip">' + esc(a) + '</span>'; }).join(' ');
+  }
+
+  function mapaEnriquecimento() {
+    var mapa = {};
+    var lista = (estado.run && estado.run.trust && estado.run.trust.enriquecimento_comentarios) || [];
+    lista.forEach(function (r) { if (r.comment_id) mapa[r.comment_id] = r; });
+    return mapa;
+  }
+
+  function celulaEnriquecimento(resultado, campo) {
+    if (!resultado) return '<span class="texto-faint">—</span>';
+
+    if (!resultado.struct) {
+      if (campo === 'sentimento') {
+        var motivoFalha = resultado.error && resultado.error.message ? esc(resultado.error.message) : 'motivo desconhecido';
+        return '<span class="selo selo--pendente" title="' + motivoFalha + '">falhou</span>';
+      }
+      return '<span class="texto-faint">—</span>';
+    }
+
+    if (campo === 'sentimento') return seloSentimento(resultado.struct.sentimento);
+    if (campo === 'adjetivos') return chipsAdjetivos(resultado.struct.adjetivos);
+    return esc(resultado.struct[campo]) || '<span class="texto-faint">—</span>';
   }
 
   function renderTrust(trust) {
@@ -1268,7 +1424,25 @@
 
   // ── Inicialização ──────────────────────────────────────────────────────
 
+  var cacheInicial = lerCache();
+  if (cacheInicial) {
+    if (Array.isArray(cacheInicial.videos) && cacheInicial.videos.length) {
+      estado.videos = cacheInicial.videos;
+    }
+    if (cacheInicial.selecionados && typeof cacheInicial.selecionados === 'object') {
+      estado.selecionados = cacheInicial.selecionados;
+    }
+    renderVideos();
+
+    if (cacheInicial.runId) restaurarRun(cacheInicial.runId);
+  }
+
   atualizarAjudaEntrada();
   carregarConfig();
-  carregarPrompts();
+  carregarPrompts().then(function () {
+    if (cacheInicial && cacheInicial.promptsAtivos && typeof cacheInicial.promptsAtivos === 'object') {
+      estado.promptsAtivos = cacheInicial.promptsAtivos;
+      renderPrompts();
+    }
+  });
 })();

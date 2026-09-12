@@ -148,6 +148,26 @@ class LLMFalso(OpenAICompatProvider):
     async def complete(self, *, system_prompt, user_prompt, temperature=0.0,
                        max_tokens=None, json_mode=False):
         LLMFalso.chamadas.append({"system": system_prompt, "user": user_prompt})
+
+        # Enriquecimento automático de comentários (src/analytics/enrichment.py)
+        # espera um item por comentário recebido, correlacionado por índice.
+        if '"comentarios"' in system_prompt:
+            entrada = json.loads(user_prompt.rsplit("--- DADOS DE ENTRADA ---\n", 1)[-1])
+            itens = [
+                {
+                    "indice": c["indice"],
+                    "sentimento": "positivo",
+                    "motivo": "elogiou o carro",
+                    "adjetivos": ["rapido"],
+                    "objeto": "motor",
+                }
+                for c in entrada.get("comentarios", [])
+            ]
+            return ProviderResponse(
+                text=json.dumps({"comentarios": itens}),
+                usage={"prompt_tokens": 10, "completion_tokens": 10, "total_tokens": 20},
+            )
+
         return ProviderResponse(
             text='```json\n{"velocidade": {"percepcao": "muito boa", '
                  '"evidencias": ["o carro e muito rapido"]}, '
@@ -276,6 +296,15 @@ async def principal():
     checar(refine.refinar(run.raw) == refine.refinar(run.raw),
            "REFINED é determinístico (mesmo RAW → mesmo resultado)")
 
+    # ── Enriquecimento automático de comentários (amostra fixa) ──
+    enriquecimento = run.trust.get("enriquecimento_comentarios", [])
+    checar(len(enriquecimento) == 3,
+           f"amostra fixa de 3 comentários, mesmo havendo 9 disponíveis (obtido {len(enriquecimento)})")
+    checar(all(r["success"] for r in enriquecimento),
+           "os 3 comentários da amostra foram enriquecidos com sucesso")
+    checar(all(r["struct"]["sentimento"] for r in enriquecimento),
+           "cada item da amostra tem o struct fixo preenchido (sentimento/motivo/adjetivos/objeto)")
+
     # ── TRUST ──
     trust = run.trust
     checar(len(trust["analises"]) == 4,
@@ -292,7 +321,11 @@ async def principal():
            "TRUST aponta o vídeo de origem")
     checar("refined_record_ids" in primeira["source"],
            "TRUST aponta os registros REFINED de origem")
-    checar(run.usage["total_tokens"] == 640, f"uso somado (obtido {run.usage['total_tokens']})")
+    # 640 dos 4 chamados de AGENT + 20 de uma única chamada do enriquecimento
+    # automático de comentários — a amostra fixa (MAX_COMENTARIOS_
+    # ENRIQUECIMENTO_AUTOMATICO=3) cabe inteira nos 3 comentários do
+    # primeiro vídeo, então não chega a precisar de uma segunda chamada.
+    checar(run.usage["total_tokens"] == 660, f"uso somado (obtido {run.usage['total_tokens']})")
 
     # entradas por tipo de prompt
     do_coments = [a for a in trust["analises"] if a["input_type"] == "comments"]

@@ -177,10 +177,18 @@
         o que é extraído — nada é fixo no código.
       </p>
     </div>
-    <button type="button" class="btn btn--linha btn--pequeno" data-novo-prompt>Novo prompt</button>
+    <div class="painel__acoes">
+      <button type="button" class="btn btn--linha btn--pequeno" data-novo-prompt>Novo prompt</button>
+      <button type="button" class="painel__colapsar" data-prompts-toggle
+              aria-expanded="true" aria-label="Recolher esta seção" title="Recolher/expandir">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
   </div>
 
-  <div class="prompts">
+  <div class="prompts" data-prompts-container>
     <div class="prompts__lista">
       <p class="rotulo-secao">Prompts salvos</p>
       <div data-lista-prompts>

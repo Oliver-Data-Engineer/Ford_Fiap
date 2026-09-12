@@ -27,6 +27,7 @@
   --accent-gov: #2f6b46;
   --accent-pipeline: #1d4ed8;
   --accent-compare: #8a3b5e;
+  --accent-analytics: #b3672e;
 
   /* estado */
   --ok: #1c7a4d;
@@ -319,6 +320,24 @@ button {
   outline: none;
 }
 
+.campo--inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.campo--inline span {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.campo--inline select,
+.campo--inline input {
+  padding: 6px 10px;
+  font-size: 12.5px;
+}
+
 /* ---------- tabela de dados ---------- */
 
 .tabela {
@@ -327,7 +346,16 @@ button {
   font-size: 13px;
 }
 
+.tabela-wrap {
+  overflow-x: auto;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
 .tabela th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   text-align: left;
   font-weight: 600;
   color: var(--text-muted);
@@ -336,6 +364,7 @@ button {
   font-size: 11.5px;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+  background: var(--bg-panel);
 }
 
 .tabela td {
@@ -344,6 +373,14 @@ button {
 }
 
 .tabela tr:last-child td { border-bottom: none; }
+
+.tabela .texto-truncado {
+  max-width: 320px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .tabela tbody tr:hover { background: var(--bg-panel-raised); }
 
@@ -374,10 +411,47 @@ button {
   background: currentColor;
 }
 
-.selo--positivo { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 35%, var(--hairline-strong)); }
+.selo--positivo {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 35%, var(--hairline-strong));
+  background: color-mix(in srgb, var(--ok) 10%, var(--bg-panel));
+}
 .selo--neutro { color: var(--text-muted); }
-.selo--negativo { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, var(--hairline-strong)); }
-.selo--pendente { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 35%, var(--hairline-strong)); }
+.selo--negativo {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--hairline-strong));
+  background: color-mix(in srgb, var(--danger) 10%, var(--bg-panel));
+}
+.selo--pendente {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 35%, var(--hairline-strong));
+  background: color-mix(in srgb, var(--warn) 10%, var(--bg-panel));
+}
+.selo--misto { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 35%, var(--hairline-strong));
+  background: color-mix(in srgb, var(--warn) 10%, var(--bg-panel));
+}
+
+.texto-faint { color: var(--text-faint); }
+
+.campo__ajuda {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin: 2px 0 0;
+  line-height: 1.5;
+}
+
+/* ---------- chip (tag pequena, pílula) ---------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  background: var(--bg-panel-raised);
+  border-radius: var(--radius-pill);
+  padding: 5px 12px;
+  color: var(--text-primary);
+}
 
 /* ---------- estado vazio ---------- */
 

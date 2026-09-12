@@ -18,6 +18,7 @@ import logging
 import threading
 from typing import Any
 
+from src.analytics import warehouse
 from src.pipelines import db
 from src.pipelines.engine import PipelineEngine, montar_steps
 from src.pipelines.models import (
@@ -60,15 +61,23 @@ def _desregistrar(run_id: str) -> None:
 
 def _persistir_tabelas(run: PipelineRun) -> None:
     """
-    Grava RAW→REFINED→TRUST no banco local (Regra 10: tudo rastreável).
+    Grava RAW→REFINED→TRUST no banco local (Regra 10: tudo rastreável) e,
+    se configurado, espelha os dados cross-execução no warehouse analítico
+    (BigQuery) que alimenta a aba Dashboard.
 
-    Isolado em try/except: uma falha aqui não deve derrubar a resposta ao
-    usuário nem apagar o resultado já calculado da execução.
+    Cada gravação isolada em seu próprio try/except: uma falha numa não deve
+    derrubar a outra, nem a resposta ao usuário, nem apagar o resultado já
+    calculado da execução.
     """
     try:
         db.salvar_tabelas_execucao(run)
     except Exception:
         logger.exception("[executor] falha ao persistir tabelas do run %s", run.id)
+
+    try:
+        warehouse.registrar_execucao(run)
+    except Exception:
+        logger.exception("[executor] falha ao gravar warehouse analítico do run %s", run.id)
 
 
 def obter_status(run_id: str) -> PipelineRun | None:

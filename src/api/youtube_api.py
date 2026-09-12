@@ -20,6 +20,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from src.agents import listar_providers
+from src.analytics import warehouse
 from src.config import ENV_VAR_POR_PROVIDER, settings
 from src.pipelines import refine
 from src.pipelines.executor import iniciar_em_background
@@ -134,6 +135,7 @@ async def obter_config():
             "model_padrao": settings.llm_model_padrao,
             "providers": providers,
         },
+        "warehouse": warehouse.status(),
     }
 
 

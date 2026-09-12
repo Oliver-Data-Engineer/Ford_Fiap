@@ -117,6 +117,18 @@
       <span class="sidebar__item-texto">Compare</span>
     </a>
 
+    <a href="{{ url_for('analytics', marca=marca, modelo=modelo, versao=versao) }}"
+       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'analytics' }}"
+       style="--item-accent: var(--accent-analytics)"
+       data-rotulo="Dashboard">
+      <span class="sidebar__item-icone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M5 19V10M12 19V5M19 19v-7" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="sidebar__item-texto">Dashboard</span>
+    </a>
+
   </nav>
 
   <div class="sidebar__rodape">v0.1 — módulos em desenvolvimento</div>

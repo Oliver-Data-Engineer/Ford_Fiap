@@ -1,0 +1,97 @@
+/* ============================================================
+   DASHBOARD ANALÍTICO — leitura do warehouse BigQuery.
+   Reaproveita tokens/classes de shared/base.css (.painel, .campo, .selo,
+   .chip, .tabela, .vazio, .aviso) — aqui só o que é específico desta
+   página. Padrão de cards de KPI/gráfico inspirado no template Sneat
+   (ícone em badge circular pastel + valor/rótulo empilhados), adaptado aos
+   tokens de cor/raio/sombra que o resto do app já usa.
+   ============================================================ */
+
+.rotulo-secao {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 0 0 10px;
+}
+
+.analytics-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.analytics-kpi {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.analytics-kpi__icone {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mode-accent, var(--accent-analytics));
+  background: color-mix(in srgb, var(--mode-accent, var(--accent-analytics)) 14%, transparent);
+}
+
+.analytics-kpi__icone svg { width: 22px; height: 22px; }
+
+.analytics-kpi__icone--ok {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+}
+
+.analytics-kpi__valor {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 2px;
+  line-height: 1.1;
+}
+
+.analytics-kpi__rotulo {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.analytics-graficos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.analytics-card-grafico__cabecalho {
+  margin-bottom: 14px;
+}
+
+.analytics-card-grafico__cabecalho .rotulo-secao { margin-bottom: 3px; }
+.analytics-card-grafico__cabecalho .campo__ajuda { margin: 0; }
+
+.analytics-grafico-wrap {
+  position: relative;
+  height: 280px;
+}
+
+/* ---------- responsivo ---------- */
+
+@media (max-width: 900px) {
+  .analytics-graficos { grid-template-columns: 1fr; }
+  .painel__cabecalho { flex-direction: column; align-items: stretch; }
+}
+
+@media (max-width: 480px) {
+  .analytics-kpis { grid-template-columns: 1fr; }
+}

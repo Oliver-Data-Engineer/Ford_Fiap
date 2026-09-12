@@ -112,6 +112,12 @@ class YouTubeAPI:
     A chave vem de `settings.youtube_api_key` por padrão; o parâmetro
     `api_key` existe só para testes e para execuções que precisem de uma
     chave distinta (nunca vem do frontend).
+
+    Sempre chamada direto, sem proxy: a API oficial (autenticada por chave)
+    não tem o problema de bloqueio por IP que a coleta de transcrição tem
+    (essa é anônima, baseada em scraping) — rotear por proxy aqui só
+    adicionaria latência sem resolver nada. Proxy fica restrito a
+    `TranscriptAPI`, e mesmo lá só entra em jogo se o YouTube bloquear.
     """
 
     def __init__(self, api_key: str | None = None, timeout: float = TIMEOUT_PADRAO):

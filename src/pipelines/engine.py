@@ -57,6 +57,7 @@ STEPS_PADRAO: list[TipoStep] = [
     TipoStep.COMMENTS,
     TipoStep.RAW,
     TipoStep.REFINED,
+    TipoStep.COMMENT_ENRICHMENT,
     TipoStep.TRUST,
 ]
 
@@ -67,6 +68,7 @@ ROTULOS: dict[TipoStep, str] = {
     TipoStep.COMMENTS: "Comentários",
     TipoStep.RAW: "RAW",
     TipoStep.REFINED: "REFINED",
+    TipoStep.COMMENT_ENRICHMENT: "Enriquecimento de comentários",
     TipoStep.AGENT: "Agente",
     TipoStep.TRUST: "TRUST",
     TipoStep.OUTPUT: "Output",
@@ -76,6 +78,12 @@ ROTULOS: dict[TipoStep, str] = {
 # Transcrições longas estouram a janela de contexto de modelos pequenos.
 MAX_CARACTERES_TRANSCRICAO = 24_000
 MAX_COMENTARIOS_POR_PROMPT = 200
+
+# Amostra fixa do enriquecimento automático de comentários — é uma
+# demonstração de que a classificação funciona, não uma análise completa
+# de todos os comentários coletados (decisão do usuário: controla custo de
+# LLM e volume de escrita no warehouse). Total por execução, não por vídeo.
+MAX_COMENTARIOS_ENRIQUECIMENTO_AUTOMATICO = 3
 
 # Coletas simultâneas de transcrição/comentários
 CONCORRENCIA_COLETA = 4
@@ -197,21 +205,34 @@ class PipelineEngine:
         Normaliza a lista de etapas.
 
         Sem etapas declaradas, monta a pipeline padrão. Etapas `agent` sempre
-        entram depois de REFINED, e TRUST/OUTPUT sempre no fim — a ordem das
-        camadas é invariante da arquitetura, não configuração do usuário.
+        entram depois de REFINED, e COMMENT_ENRICHMENT/TRUST/OUTPUT sempre no
+        fim — a ordem das camadas é invariante da arquitetura, não
+        configuração do usuário. O enriquecimento de comentários em
+        particular **não é configurável**: roda sempre que há comentários
+        coletados, mesmo que o usuário não o tenha declarado na lista de
+        `steps` (mesmo tratamento que TRUST já recebe).
         """
         if not config.steps:
             return [PassoPipeline(type=t) for t in STEPS_PADRAO]
 
         declarados = [p for p in config.steps]
         agentes = [p for p in declarados if p.type == TipoStep.AGENT]
-        outros = [p for p in declarados if p.type not in (TipoStep.AGENT, TipoStep.TRUST, TipoStep.OUTPUT)]
+        outros = [
+            p for p in declarados
+            if p.type not in (TipoStep.AGENT, TipoStep.COMMENT_ENRICHMENT, TipoStep.TRUST, TipoStep.OUTPUT)
+        ]
 
         ordem = {t: i for i, t in enumerate(STEPS_PADRAO)}
         outros.sort(key=lambda p: ordem.get(p.type, 99))
 
         finais = [p for p in declarados if p.type == TipoStep.OUTPUT]
-        return outros + agentes + [PassoPipeline(type=TipoStep.TRUST)] + finais
+        return (
+            outros
+            + [PassoPipeline(type=TipoStep.COMMENT_ENRICHMENT)]
+            + agentes
+            + [PassoPipeline(type=TipoStep.TRUST)]
+            + finais
+        )
 
     async def _executar_passo(
         self,
@@ -226,6 +247,7 @@ class PipelineEngine:
             TipoStep.COMMENTS: self._passo_comentarios,
             TipoStep.RAW: self._passo_raw,
             TipoStep.REFINED: self._passo_refined,
+            TipoStep.COMMENT_ENRICHMENT: self._passo_enriquecimento_comentarios,
             TipoStep.AGENT: self._passo_agente,
             TipoStep.TRUST: self._passo_trust,
             TipoStep.OUTPUT: self._passo_output,
@@ -521,6 +543,84 @@ class PipelineEngine:
             detalhe += f" ({stats['comentarios_descartados']} duplicados/vazios removidos)"
         if descartados:
             detalhe += f", {len(descartados)} vídeo(s) fora dos filtros"
+        resultado.concluir(detalhe)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Enriquecimento automático de comentários
+    # ─────────────────────────────────────────────────────────────────────────
+
+    async def _passo_enriquecimento_comentarios(self, passo, contexto, run, resultado) -> None:
+        """
+        Struct único e fixo (`sentimento`/`motivo`/`adjetivos`/`objeto`) para
+        uma **amostra fixa** de até `MAX_COMENTARIOS_ENRIQUECIMENTO_
+        AUTOMATICO` comentários no total (não todos os coletados — é uma
+        demonstração de que a classificação funciona, decisão do usuário) —
+        sem "modos" selecionáveis, sempre roda (não é uma etapa `agent`
+        configurável pelo usuário). Grava o resultado em
+        `contexto["trust"]["enriquecimento_comentarios"]`;
+        `src/analytics/warehouse.registrar_execucao` lê daí para persistir em
+        `comentarios_analise` (BigQuery) no fim da execução.
+        """
+        comentarios_por_video: dict = contexto["refined"].get("comments") or {}
+
+        # Achata em (video_id, comentário) preservando a ordem de coleta e
+        # corta na amostra fixa total — depois reagrupa por vídeo só pra
+        # manter o padrão de uma chamada de LLM por vídeo (lote) que
+        # enriquecer_comentarios já usa.
+        amostra_por_video: dict[str, list[dict]] = {}
+        restante = MAX_COMENTARIOS_ENRIQUECIMENTO_AUTOMATICO
+        for video_id, lista in comentarios_por_video.items():
+            if restante <= 0:
+                break
+            for comentario in lista:
+                if restante <= 0:
+                    break
+                amostra_por_video.setdefault(video_id, []).append(comentario)
+                restante -= 1
+
+        if not amostra_por_video:
+            resultado.pular("nenhum comentário para enriquecer")
+            return
+
+        # Import local: evita ciclo de import entre engine.py e
+        # src/analytics/enrichment.py, que por sua vez importa
+        # src.pipelines.models/store (submódulos do próprio pacote em
+        # inicialização quando este módulo é importado primeiro).
+        from src.analytics.enrichment import enriquecer_comentarios, garantir_prompt
+
+        prompt = garantir_prompt()
+        llm: ConfigLLM = contexto["llm"]
+        agente = Agente(
+            provider=llm.provider,
+            model=llm.model,
+            temperature=llm.temperature,
+            max_tokens=llm.max_tokens,
+        )
+
+        resultados: list[dict] = []
+        for video_id, lista in amostra_por_video.items():
+            itens = await enriquecer_comentarios(agente, lista, prompt=prompt)
+            for item in itens:
+                item["video_id"] = video_id
+            resultados.extend(itens)
+
+            # Todo item de `itens` vem da mesma chamada (um lote por vídeo) e
+            # carrega o mesmo `usage` — soma uma única vez por vídeo, não por
+            # comentário, senão o consumo de tokens é contado em duplicidade.
+            if itens and itens[0].get("usage"):
+                self._somar_usage(contexto["usage"], itens[0]["usage"])
+
+        contexto["trust"]["enriquecimento_comentarios"] = resultados
+
+        sucesso = sum(1 for r in resultados if r["success"])
+        if sucesso == 0:
+            resultado.falhar(
+                "EnrichmentError",
+                f"Todos os {len(resultados)} comentário(s) falharam no enriquecimento.",
+            )
+            return
+
+        detalhe = f"{sucesso}/{len(resultados)} comentário(s) enriquecido(s)"
         resultado.concluir(detalhe)
 
     # ─────────────────────────────────────────────────────────────────────────

@@ -50,6 +50,8 @@ def carregar_env(caminho: Path | None = None) -> None:
         logger.warning("[config] não foi possível ler %s: %s", arquivo, exc)
         return
 
+    definidas_neste_arquivo: set[str] = set()
+
     for linha in conteudo.splitlines():
         linha = linha.strip()
         if not linha or linha.startswith("#") or "=" not in linha:
@@ -59,11 +61,41 @@ def carregar_env(caminho: Path | None = None) -> None:
         chave = chave.strip()
         valor = valor.strip().strip('"').strip("'")
 
-        if chave and chave not in os.environ:
+        if not chave:
+            continue
+
+        # Chave repetida no próprio .env é quase sempre erro de edição (duas
+        # versões da mesma variável, uma delas esquecida) — a primeira
+        # ocorrência sempre vence, mas isso não pode ficar silencioso: já
+        # causou um bug real (GOOGLE_APPLICATION_CREDENTIALS apontando pra
+        # pasta errada porque uma segunda linha, correta, foi ignorada).
+        if chave in definidas_neste_arquivo:
+            logger.warning(
+                "[config] '%s' está definida mais de uma vez em %s — "
+                "usando a primeira ocorrência, as demais foram ignoradas.",
+                chave, arquivo,
+            )
+            continue
+        definidas_neste_arquivo.add(chave)
+
+        if chave not in os.environ:
             os.environ[chave] = valor
 
 
 carregar_env()
+
+
+# Evita logar o mesmo aviso de configuração inválida a cada chamada de uma
+# property — algumas (como `bigquery_configurado`) são lidas a cada execução
+# de pipeline.
+_avisos_emitidos: set[str] = set()
+
+
+def _avisar_uma_vez(chave: str, mensagem: str) -> None:
+    if chave in _avisos_emitidos:
+        return
+    _avisos_emitidos.add(chave)
+    logger.warning(mensagem)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -91,12 +123,23 @@ class Settings:
         return os.getenv("YOUTUBE_API_KEY") or None
 
     @property
+    def youtube_proxy_list_url(self) -> str | None:
+        """
+        URL de download de uma lista de proxies (o link de "Download" do
+        painel da Webshare, por exemplo) — sempre devolve o plano atual, ao
+        contrário de um arquivo estático. Tem prioridade sobre
+        `youtube_proxy_list_path` quando ambos configurados. Usado tanto na
+        coleta de transcrições quanto nas chamadas à YouTube Data API v3.
+        """
+        return os.getenv("YOUTUBE_PROXY_LIST_URL") or None
+
+    @property
     def youtube_proxy_list_path(self) -> str | None:
         """
-        Caminho de um CSV `host:porta:usuario:senha` (uma linha por proxy)
-        usado para contornar bloqueios de IP na coleta de transcrições.
-        Opcional — sem ele, a coleta roda normalmente sem proxy. Ignorado se
-        as credenciais nativas da Webshare (abaixo) estiverem configuradas.
+        Caminho de um CSV `host:porta:usuario:senha` (uma linha por proxy),
+        salvo em disco — fallback de `youtube_proxy_list_url` (ex.: quando
+        não há rede para baixar a lista atual). Opcional — sem nenhum dos
+        dois, a coleta roda normalmente sem proxy.
         """
         return os.getenv("YOUTUBE_PROXY_LIST") or None
 
@@ -143,6 +186,65 @@ class Settings:
         if provider.lower() == "ollama":
             return True
         return bool(self.llm_api_key(provider))
+
+    # ── BigQuery (warehouse analítico do Dashboard) ─────────────────────────
+
+    @property
+    def bigquery_dataset(self) -> str:
+        """Nome do dataset BigQuery onde as tabelas analíticas do YouTube
+        (canais/transcrições/comentários/comentários-análise) são gravadas.
+        Separado do dataset `analytics_ford` usado pelo notebook de marcas
+        FIPE — são domínios de dado diferentes."""
+        return os.getenv("BIGQUERY_DATASET", "youtube_analytics")
+
+    @property
+    def bigquery_project_id(self) -> str | None:
+        """Projeto GCP explícito, se o ADC não bastar para resolver um. Sem
+        isso, `bigquery.Client()` resolve o projeto pelas credenciais ativas
+        (mesmo comportamento do notebook `tabela_marcas.ipynb`)."""
+        return os.getenv("GOOGLE_CLOUD_PROJECT") or None
+
+    @property
+    def bigquery_configurado(self) -> bool:
+        """
+        True se `GOOGLE_APPLICATION_CREDENTIALS` aponta para um arquivo que
+        realmente existe — nunca expõe o valor, só a presença (Regra de
+        segurança da seção 10 do SPEC). Sem isso, o warehouse fica
+        desabilitado e a gravação analítica é pulada (recurso opcional, mas
+        agora com um aviso claro no log em vez de falhar em silêncio — já
+        aconteceu de a variável apontar pra uma pasta em vez de um arquivo).
+        """
+        caminho = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        if not caminho:
+            return False
+
+        if not Path(caminho).is_file():
+            _avisar_uma_vez(
+                "bigquery_credenciais_invalidas",
+                f"[config] GOOGLE_APPLICATION_CREDENTIALS='{caminho}' não é um "
+                "arquivo existente (pasta ou caminho errado?) — o warehouse "
+                "BigQuery do Dashboard fica desabilitado até isso ser corrigido.",
+            )
+            return False
+
+        return True
+
+    # ── Gov Mode (catálogo FIPE — mesmo projeto GCP, dataset separado) ──────
+
+    @property
+    def govmode_bigquery_dataset(self) -> str:
+        """Dataset onde o catálogo FIPE (marcas/modelos/código FIPE) é
+        gravado — o mesmo `analytics_ford` do notebook `tabela_marcas.ipynb`,
+        separado do `bigquery_dataset` do YouTube (domínios de dado
+        diferentes, mesmo projeto GCP)."""
+        return os.getenv("GOVMODE_BIGQUERY_DATASET", "analytics_ford")
+
+    @property
+    def fipe_api_token(self) -> str | None:
+        """Token da API da FIPE (parallelum.com.br), enviado como
+        `X-Subscription-Token` — só é exigido pelas chamadas que resolvem o
+        código FIPE de um modelo/ano; marcas e modelos são coletados sem ele."""
+        return os.getenv("FIPE_API_TOKEN") or None
 
     # ── Diretórios ───────────────────────────────────────────────────────────
 

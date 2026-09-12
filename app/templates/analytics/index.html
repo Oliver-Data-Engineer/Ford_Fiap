@@ -1,0 +1,149 @@
+{% extends "_layout/dashboard_base.html" %}
+
+{% block titulo %}Dashboard{% endblock %}
+{% block mode_accent %}--accent-analytics{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='analytics/style.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page__header">
+  <div>
+    <h1 class="page__titulo">Dashboard</h1>
+    <p class="page__descricao">
+      Análise consolidada dos vídeos, transcrições e comentários coletados pelas
+      pipelines do YouTube, com o enriquecimento automático de comentários
+      (sentimento, motivo, adjetivos, objeto) já aplicado.
+    </p>
+  </div>
+  <a href="{{ url_for('youtube', marca=marca, modelo=modelo, versao=versao) }}"
+     class="btn btn--primario">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+    Abrir Playground
+  </a>
+</div>
+
+<div data-aviso-analytics class="aviso aviso--erro" hidden></div>
+
+<div class="painel">
+  <div class="painel__cabecalho">
+    <div>
+      <h2 class="painel__titulo">Filtros</h2>
+      <p class="painel__legenda">Combine canal e sentimento para recortar o painel inteiro.</p>
+    </div>
+    <div class="painel__acoes">
+      <label class="campo campo--inline">
+        <span>Canal</span>
+        <select data-filtro-canal>
+          <option value="">Todos</option>
+        </select>
+      </label>
+      <label class="campo campo--inline">
+        <span>Sentimento</span>
+        <select data-filtro-sentimento>
+          <option value="">Todos</option>
+        </select>
+      </label>
+      <button type="button" class="btn btn--linha btn--pequeno" data-limpar-filtros>Limpar</button>
+    </div>
+  </div>
+</div>
+
+<div class="analytics-kpis">
+  <div class="analytics-kpi">
+    <span class="analytics-kpi__icone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M4 5.5h16a1 1 0 011 1V16a1 1 0 01-1 1H9l-4.5 3.5V17H4a1 1 0 01-1-1V6.5a1 1 0 011-1z" stroke-linejoin="round"/>
+      </svg>
+    </span>
+    <span>
+      <p class="analytics-kpi__valor" data-kpi-total>—</p>
+      <p class="analytics-kpi__rotulo">Comentários enriquecidos</p>
+    </span>
+  </div>
+
+  <div class="analytics-kpi">
+    <span class="analytics-kpi__icone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <rect x="3.5" y="6" width="17" height="12" rx="2.2"/>
+        <path d="M10.5 9.5l4.5 2.5-4.5 2.5z" fill="currentColor" stroke="none"/>
+      </svg>
+    </span>
+    <span>
+      <p class="analytics-kpi__valor" data-kpi-videos>—</p>
+      <p class="analytics-kpi__rotulo">Vídeos analisados</p>
+    </span>
+  </div>
+
+  <div class="analytics-kpi">
+    <span class="analytics-kpi__icone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="8.5" cy="9" r="3"/>
+        <path d="M2.5 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" stroke-linecap="round"/>
+        <circle cx="17" cy="8" r="2.3"/>
+        <path d="M15.5 13.6c2.6.3 4.5 2.2 4.5 5.4" stroke-linecap="round"/>
+      </svg>
+    </span>
+    <span>
+      <p class="analytics-kpi__valor" data-kpi-canais>—</p>
+      <p class="analytics-kpi__rotulo">Canais monitorados</p>
+    </span>
+  </div>
+
+  <div class="analytics-kpi">
+    <span class="analytics-kpi__icone analytics-kpi__icone--ok">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M4 18l5-5 4 3 7-8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M15 8h5v5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </span>
+    <span>
+      <p class="analytics-kpi__valor" data-kpi-positivo>—</p>
+      <p class="analytics-kpi__rotulo">Sentimento positivo</p>
+    </span>
+  </div>
+</div>
+
+<div class="analytics-graficos">
+  <div class="painel analytics-card-grafico">
+    <div class="analytics-card-grafico__cabecalho">
+      <p class="rotulo-secao">Distribuição por sentimento</p>
+      <span class="campo__ajuda">% de comentários enriquecidos, por classificação</span>
+    </div>
+    <div class="analytics-grafico-wrap"><canvas data-grafico-sentimento></canvas></div>
+  </div>
+  <div class="painel analytics-card-grafico">
+    <div class="analytics-card-grafico__cabecalho">
+      <p class="rotulo-secao">Principais objetos comentados</p>
+      <span class="campo__ajuda">Do que as pessoas mais falam nos comentários</span>
+    </div>
+    <div class="analytics-grafico-wrap"><canvas data-grafico-objeto></canvas></div>
+  </div>
+</div>
+
+<div class="painel">
+  <div class="painel__cabecalho">
+    <div>
+      <h2 class="painel__titulo">Comentários enriquecidos</h2>
+      <p class="painel__legenda" data-resumo-tabela>Carregando…</p>
+    </div>
+    <div class="painel__acoes">
+      <button type="button" class="btn btn--linha btn--pequeno" data-pagina-anterior>Anterior</button>
+      <button type="button" class="btn btn--linha btn--pequeno" data-pagina-seguinte>Próxima</button>
+    </div>
+  </div>
+  <div data-tabela-comentarios>
+    <div class="vazio">
+      <strong>Carregando…</strong>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.7/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='analytics/script.js') }}"></script>
+{% endblock %}
