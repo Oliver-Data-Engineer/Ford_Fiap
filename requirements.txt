@@ -106,3 +106,7 @@ google-cloud-bigquery-storage==2.41.0
 pandas==2.2.3
 db-dtypes==1.3.1
 pyarrow==18.1.0
+
+# ── Scraper Mode — auto-discovery de sites de carro (opcional) ────────────────
+# Depois do pip install, rode uma vez: playwright install chromium
+playwright==1.49.0

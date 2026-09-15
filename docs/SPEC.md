@@ -67,6 +67,7 @@ testes passem.
 | 8 | Prompt é configuração, não código | Nenhum texto de prompt hardcoded na lógica — tudo vem de `Prompt` salvo |
 | 9 | Provider é substituível | Trocar `provider="groq"` por `"anthropic"` não muda mais nada |
 | 10 | Tudo é rastreável | Todo insight carrega `source` (video_id/comment_id) + `agent` (provider/model/prompt_id/version) |
+| 11 | Seletor de scraper nunca é confiável sem passar pela tela de teste; o LLM define a forma **uma vez** (cacheada/versionada), nunca é chamado de novo a cada extração | `src/scraper/discovery.py` só roda por ação explícita do usuário (`/discover`); `src/scraper/engine.py` nunca importa `src.agents` — extração é puro seletor CSS |
 
 ---
 
@@ -108,11 +109,30 @@ src/
 ├── airflow_gen/
 │   └── generator.py            Pipeline (config) → arquivo de DAG (.py) em airflow/dags/
 │
+├── bigquery_warehouse.py       BigQueryWarehouse genérico — extraído de analytics/warehouse.py, reaproveitado por govmode/ e scraper/
+│
+├── govmode/                    Catálogo FIPE (marca/modelo/ano) — domínio paralelo, não extensão do YouTube (seção 13.2)
+│   ├── models.py, engine.py, executor.py, store.py, warehouse.py, schemas.py, dag_generator.py
+│   └── client.py                FipeAPI (parallelum.com.br + brasilapi.com.br)
+│
+├── scraper/                    Auto-discovery de sites de carro — domínio paralelo (seção 14), mesmo padrão do Gov Mode
+│   ├── models.py                 SiteScraper/MapaSeletor/ScraperRun (Pydantic) — seletores por objetivo, versionado
+│   ├── discovery.py              ÚNICA camada que chama o LLM — HTML simplificado → Agente → Seletor* validado
+│   ├── prompts.py, html_simplifier.py, browser.py   prompt fixo por objetivo, limpeza de HTML, fetch via Playwright
+│   ├── extractor.py              Extração determinística (BeautifulSoup), SEM LLM — usa o MapaSeletor já salvo
+│   ├── engine.py, executor.py    Mesmo shape do Gov Mode — 1 "passo" por objetivo, falha isolada por passo
+│   ├── store.py                  data/scraper_sites.json, data/scraper_runs.json
+│   ├── warehouse.py, schemas.py  scraper_ficha_tecnica/scraper_anuncios/scraper_comentarios (BigQuery)
+│   ├── dag_generator.py
+│   └── proxy.py                  Resolver de ProxyPool (src/youtube/proxy_pool.py, reaproveitado sem alteração)
+│
 └── api/                        CAMADA HTTP (FastAPI)
     ├── youtube_api.py           /youtube/*
     ├── prompts_api.py           /prompts/*
     ├── pipelines_api.py         /pipelines/*
     ├── analytics_api.py         /analytics/* (leitura do warehouse — Dashboard)
+    ├── gov_api.py                /gov/* (catálogo FIPE + pipelines — seção 13)
+    ├── scraper_api.py            /scraper/* (auto-discovery de sites de carro — seção 14)
     └── specs_api.py             /specs/* (módulo anterior, especificações técnicas — não tocado nesta sessão)
 ```
 
@@ -126,6 +146,7 @@ app/
 │   ├── pipeline/                Gestão de pipelines + DAGs (reescrito nesta sessão)
 │   ├── analytics/                Dashboard analítico (filtros + gráficos + tabela, sessão seguinte)
 │   ├── gov/                      Catálogo FIPE + pipelines próprias (reescrito na sessão do Gov Mode, seção 13)
+│   ├── scraper/                  Auto-discovery de sites de carro (seção 14)
 │   └── dashboard/, scraping/, compare/, x/   Não tocados estruturalmente — só herdam o tema
 └── static/
     ├── shared/base.css           Tokens de design (paleta, tipografia, radius, sombra) — fonte única do tema
@@ -133,7 +154,8 @@ app/
     ├── youtube/{style.css,script.js}   O maior arquivo do projeto (script.js ~1300 linhas)
     ├── pipeline/{style.css,script.js}
     ├── analytics/{style.css,script.js}  Filtros + Chart.js (CDN) + tabela paginada
-    └── gov/{style.css,script.js}        Catálogo FIPE + pipelines (seção 13) — replica classes de pipeline/ e analytics/, sem carregá-los
+    ├── gov/{style.css,script.js}        Catálogo FIPE + pipelines (seção 13) — replica classes de pipeline/ e analytics/, sem carregá-los
+    └── scraper/{style.css,script.js}    Auto-discovery de sites de carro (seção 14) — mesma replicação de classes
 ```
 
 ```
@@ -324,6 +346,13 @@ de fora recusando.
 | `YouTubeAPI.search_videos()` via proxy | ✅ 3 vídeos, 1.8s |
 | `YouTubeAPI.get_video()` / `get_comments()` via proxy | ✅ ambos OK |
 | `PipelineEngine.executar()` completo (search→transcript→comments→RAW→REFINED) | ✅ `status=success`, 2 vídeos, 2/2 transcrições, 20 comentários |
+
+**Reaproveitado por outros domínios**: `ProxyPool` é domain-agnostic desde o
+início (só rotaciona uma lista de URLs de proxy) — o Scraper Mode (seção 14)
+usa a classe **sem alteração nenhuma**, só um segundo `resolver_pool_padrao()`
+próprio (`src/scraper/proxy.py`) lendo variáveis de ambiente próprias
+(`SCRAPER_PROXY_LIST_URL`/`SCRAPER_PROXY_LIST`) — mesma prioridade
+URL-depois-arquivo, dataset/domínio de proxy separado do YouTube.
 
 Como bônus não previsto: rotear por esse proxy residencial também contornou
 um problema de verificação de certificado TLS que existe no ambiente de
@@ -960,10 +989,44 @@ recém-criado, não uma falha):
   marcas/modelos/registros com FIPE, % de cobertura).
 
 Atenção à ordem de declaração (mesmo cuidado de `pipelines_api.py`):
-`/runs/{run_id}` e as rotas fixas de catálogo (`/marcas`, `/modelos`,
-`/fipe`, `/resumo`) precisam vir **antes** de `/pipelines/{pipeline_id}`
-no arquivo, senão o FastAPI tenta casar essas rotas fixas como um
-`pipeline_id`.
+`/runs/{run_id}` e as rotas fixas de catálogo/preço (`/marcas`,
+`/modelos`, `/fipe`, `/resumo`, `/preco/*`) precisam vir **antes** de
+`/pipelines/{pipeline_id}` no arquivo, senão o FastAPI tenta casar essas
+rotas fixas como um `pipeline_id`.
+
+**Catálogo & busca de preço, unificados** (inspirado na seção
+"#01/busca_de_preco.ts" de fipe.api.br — usada só como referência
+visual/UX; a fonte de dado continua sendo `FipeAPI`/parallelum, não o
+produto pago deles). Antes eram duas seções separadas (um browse do
+catálogo do BigQuery e uma busca de preço ao vivo); foram unificadas numa
+só pra não repetir marca/modelo em dois fluxos:
+
+- `GET /gov/preco/marcas|modelos` — direto na `FipeAPI`
+  (`src/govmode/client.py`), sem tocar no BigQuery. Sempre carros:
+  `tipo_veiculo` não é parâmetro — está fixo em
+  `TIPO_VEICULO_PRECO = "carros"` no código.
+- `GET /gov/preco/modelo?marca_codigo=&modelo_codigo=` — visão unificada:
+  todos os anos ao vivo (`buscar_anos`) já cruzados com o que o catálogo
+  do BigQuery (`MODELOS_COM_FIPE`) tiver mapeado de execuções passadas da
+  pipeline (`codigo_fipe`/`atualizado_em`, sem custo de rede — via
+  `_executar_catalogo`, tolerante a BigQuery não configurado, devolvendo
+  `null` em vez de erro), mais o valor ao vivo do ano mais recente
+  (`atual`, única chamada com token nesta rota). Se só o `atual` falhar
+  (`FipeAPIError`), a resposta inteira não cai — `atual` vem como
+  `{erro, motivo}` e a tabela de anos mapeados continua útil.
+- `GET /gov/preco/valor?marca_codigo=&modelo_codigo=&ano_codigo=` — busca
+  o valor de um ano específico sob demanda (usado quando o usuário clica
+  "Ver valor" numa linha da tabela que não veio pré-carregada). Chama
+  `buscar_codigo_fipe` (único outro método com token) e devolve o
+  envelope da parallelum (`Valor`, `Marca`, `Modelo`, `AnoModelo`,
+  `Combustivel`, `CodigoFipe`, `MesReferencia`, ...) direto, sem gravar
+  nada.
+- Diferença chave para os endpoints de catálogo (`/gov/marcas` etc.,
+  ainda existentes e usados só pelo datalist da pipeline — veja abaixo):
+  aqui "sem dado" nunca é um estado normal fora do que já foi tratado
+  acima — qualquer outra `FipeAPIError` vira erro (`_erro_fipe`):
+  `missing_token` → 503, `timeout`/`network` → 502, senão repassa o
+  status da API externa.
 
 ### 13.7 Frontend (`app/templates/gov/`, `app/static/gov/`)
 
@@ -974,24 +1037,42 @@ genérico `/api/*`, que já cobre `/api/gov/*` sem código extra no Flask).
 - **KPIs**: mesmo padrão visual do Dashboard do YouTube (ícone em badge
   circular pastel + valor/rótulo), classes `.analytics-kpi*` replicadas em
   `gov/style.css` (esta página não carrega `analytics/style.css`).
-- **Catálogo**: tipo de veículo → marca → modelo → tabela de anos/código
-  FIPE, usando `.tabela`/`.tabela-wrap` de `shared/base.css`.
+- **Catálogo & preço** (`#01`, topo da página, painel único — antigo
+  "Catálogo FIPE" e antiga "Busca de preço" foram fundidos aqui): marca →
+  modelo (sempre carros — sem seletor de tipo de veículo), cada campo um
+  **combobox filtrável** (`criarCombobox` em `gov/script.js`): input de
+  texto + lista suspensa, filtrada localmente (substring,
+  case-insensitive) conforme o usuário digita, a partir da lista inteira
+  já carregada de `/api/gov/preco/*` — sem round-trip por tecla, igual o
+  site de referência. Só habilita o próximo campo depois do anterior ser
+  escolhido. Ao escolher o **modelo** (sem precisar escolher o ano à
+  parte), chama `/api/gov/preco/modelo` e já mostra tudo de uma vez:
+  painel de destaque com preço/código FIPE/combustível/ano modelo/mês de
+  referência do ano mais recente (`.busca-preco*`) e, logo abaixo, a
+  tabela com o histórico completo de anos — código FIPE já preenchido
+  pros anos que o catálogo tiver mapeado, e um botão "Ver valor" por
+  linha pra buscar sob demanda o valor de um ano específico ainda não
+  mapeado (`/api/gov/preco/valor`, preenche a célula da linha in-place).
+  Estado (`estadoBusca`) próprio.
 - **Pipelines**: lista de pipelines nomeadas + modal de criação (nome,
   tipo de veículo, marcas-alvo como texto livre separado por vírgula,
   resolvido pelo backend case-insensitive — seção 13.5 — e agenda) +
   execução com polling + histórico + código da DAG. Estrutura e classes
   (`.pipeline-card`, `.dobra`, `.codigo`/`.tk-*`) replicadas de
   `app/static/pipeline/script.js`/`style.css`, já que esta página não
-  carrega os estáticos da aba Pipelines do YouTube.
+  carrega os estáticos da aba Pipelines do YouTube. O campo "Marcas-alvo"
+  do modal continua com autocomplete (`<datalist>`) alimentado por
+  `GET /gov/marcas` (catálogo do BigQuery) — cosmético, carregado em
+  segundo plano, sem select visível na página.
 - **Contextualização** (pedido explícito do usuário): a página já recebe
   `marca`/`modelo`/`versao` da query string, como todas as outras
   (`veiculo_selecionado()`, `app/app.py`). Se a `marca` da query bater por
-  nome (case-insensitive) com uma `marca_nome` já catalogada, o filtro do
-  catálogo e o campo "Marcas-alvo" do modal de nova pipeline já vêm
-  pré-preenchidos. É cosmético — a identidade FIPE (`marca_codigo`
-  numérico) nunca é unificada com a identidade de `specs_api` (nomes de
-  scraping), que são fontes diferentes e forçar equivalência geraria
-  falso-positivo.
+  nome (case-insensitive) com uma marca da busca ao vivo, o combobox de
+  marca do painel unificado e o campo "Marcas-alvo" do modal de nova
+  pipeline já vêm pré-preenchidos. É cosmético — a identidade FIPE
+  (`marca_codigo` numérico) nunca é unificada com a identidade de
+  `specs_api` (nomes de scraping), que são fontes diferentes e forçar
+  equivalência geraria falso-positivo.
 
 ### 13.8 Testes
 
@@ -1007,3 +1088,407 @@ genérico `/api/*`, que já cobre `/api/gov/*` sem código extra no Flask).
 - `tests/test_govmode_dag.py` — geração da DAG, confirma que o template do
   Gov Mode não se confunde com o do YouTube (executor, tags e credencial
   verificada são diferentes) e que nenhum segredo vaza pro código gerado.
+
+---
+
+## 14. Scraper Mode — auto-discovery de sites de carro
+
+Cadastra um site qualquer de carro, usa um LLM pra inferir os seletores CSS
+uma vez por (site, objetivo), valida numa tela de teste (determinística, sem
+LLM) e só então registra o site — virando uma fonte de dados própria,
+coletada em background e disponível como API dentro do app. Inspirado num
+repositório de referência (`WebScrapingAntigravity`, fora deste projeto:
+Next.js+Prisma+Playwright+Gemini) — a ideia central de lá que valia a pena
+trazer pra cá está documentada explicitamente no §14.2.
+
+### 14.1 Os três objetivos
+
+Cada site cadastrado escolhe manualmente (checkbox, não auto-detectado)
+quais objetivos mapear, cada um com sua própria URL de amostra:
+
+| Objetivo | O que extrai | Pré-requisito |
+|---|---|---|
+| `ficha_tecnica` | Tabela de atributos técnicos (motor, potência, câmbio...) | — |
+| `anuncios` | Listagem de anúncios (preço, localização, vendedor...) | — |
+| `comentarios` | Comentários/avaliações de um anúncio | exige `anuncios` também marcado (validado em `src/api/scraper_api.py::_validar_objetivos`) |
+
+### 14.2 Por que um domínio paralelo, não uma extensão do Gov Mode/YouTube
+
+Mesmo racional já documentado na seção 13.2 pro Gov Mode, estendido aqui a
+um **segundo** domínio paralelo: `Pipeline.source`/`StepResult.type`
+(YouTube) e `GovPipeline`/`StepResultGov` (FIPE) são tipados concretamente
+pros seus próprios domínios — generalizar um deles pra caber "site
+qualquer com seletores CSS" arriscaria os testes já passando desses dois
+sistemas, pra zero ganho real. `src/scraper/` importa só o que é
+genuinamente genérico (`ConfigLLM`, `ConfigSchedule`, `StatusRun`/
+`StatusStep`/`StatusPipeline`, `ErroStep`, `agora_iso`/`novo_id` de
+`src.pipelines.models`; `_carregar`/`_salvar` de `src.pipelines.store`;
+`BigQueryWarehouse` de `src.bigquery_warehouse`; `ProxyPool` de
+`src.youtube.proxy_pool`; `montar_cron`/`descrever_schedule`/`slug` de
+`src.airflow_gen.generator`; `Agente` de `src.agents`) e define seus
+próprios equivalentes pro que é específico (`SiteScraper`, `MapaSeletor`,
+`ScraperRun`, `TipoStepScraper` — `src/scraper/models.py`).
+
+O `/scraping` mode existente (`src/utils/CarrosWeb.py`, `src/api/
+specs_api.py`) também não é tocado — é uma busca estática (curl_cffi +
+BeautifulSoup, fontes fixas, sem persistência) que continua funcionando
+exatamente como antes; o Scraper Mode é aditivo, um mecanismo de fetch novo
+(Playwright) só usado por `src/scraper/`.
+
+### 14.3 A ideia central trazida do repositório de referência
+
+`gemini_logic.md` (do repositório de referência) chama essa estratégia de
+**"Detecção de Estrutura sob Demanda"**: o LLM é chamado **uma vez** por
+(site, objetivo) pra inferir a *forma* dos dados (os seletores CSS);
+**toda extração seguinte é pura leitura determinística por seletor**
+(BeautifulSoup, sem LLM). Isso dá três coisas ao mesmo tempo — economia
+(LLM só custa na descoberta, não a cada coleta), velocidade (sem latência
+de LLM nas execuções recorrentes) e confiabilidade (o LLM define a *forma*,
+o código lê os dados *reais* — sem risco de alucinar um preço ou nome que
+não está na página).
+
+Três diferenças deliberadas do que o repositório de referência fazia:
+1. **Tela de teste antes de registrar** — lá, o JSON do LLM era usado na
+   mesma hora que chegava, sem revisão humana. Aqui, `POST .../discover`
+   só grava um RASCUNHO (`site.seletores`, `registrado` continua `false`);
+   só depois de `POST .../test` confirmar que os seletores produzem dados
+   de verdade (`validado_em` preenchido) é que `POST .../register` libera
+   o site pra rodar de verdade.
+2. **Resumo de confirmação em linguagem natural, gerado pela IA** (pedido
+   explícito do usuário — o diferencial sobre o repositório de referência,
+   que só mostrava a tabela de dados crua): a cada `POST .../test`, além da
+   tabela, `discovery.gerar_resumo_confirmacao()` chama o LLM de novo — não
+   pra inferir seletor nenhum, só pra **descrever em 1-2 frases** o que a
+   amostra extraída parece ser (ex.: "Encontrados 12 atributos técnicos,
+   aparenta ser a ficha de um Ford Ka 2024"), pro usuário confirmar de
+   leitura rápida "é exatamente isso que essa página deveria mostrar?"
+   antes de aprovar. Roda sobre os **dados já extraídos** (determinístico),
+   nunca sobre o HTML — não é descoberta de novo, é uma segunda opinião da
+   IA sobre o resultado. Nunca bloqueia o teste: se essa chamada falhar,
+   vira uma frase de aviso ("Não foi possível gerar o resumo automático...")
+   e a tabela de dados continua sendo a fonte de verdade
+   (`tests/test_scraper_discovery.py`, seção 4).
+3. **Proxy fixo compartilhado, não por site** — lá, cada site guardava seu
+   próprio proxy (host/porta/user/senha em colunas da tabela, sem rotação).
+   Aqui, todos os sites compartilham o mesmo `ProxyPool` do §8/§14 (rotação
+   round-robin, lista fechada configurada uma vez via env), consistente
+   com o resto do projeto.
+
+### 14.4 Motor de descoberta (`src/scraper/discovery.py`) — a única camada que chama o LLM
+
+Fluxo por objetivo (`descobrir_objetivo`): busca HTML (`browser.py`,
+Playwright + retry `2**attempt` até 3 tentativas, mesma constante de
+`CarrosWeb._get`) → simplifica (`html_simplifier.py`: tira `script`/
+`style`/`svg`/comentários/atributos inline, corta em
+`settings.scraper_discovery_max_html_chars`) → `Agente(provider=site.llm.
+provider, model=site.llm.model, ...)` (por site, cai pro padrão global
+`LLM_PROVIDER`/`LLM_MODEL` se `None` — igual `Agente.__init__` já faz) →
+`agente.run(html, prompt=PROMPT_POR_OBJETIVO[objetivo], output_format=
+"json")` (nunca levanta — `AgentResult.success` indica falha) → valida o
+JSON contra o Pydantic `Seletor*` certo (`SeletorFichaTecnica`/
+`SeletorAnuncios`/`SeletorComentarios`, mesmo padrão de validação de
+`AnaliseComentarioStruct` em `src/analytics/enrichment.py`) → devolve
+`MapaSeletor` (rastreia `llm={"provider","model"}`) ou `ErroStep` isolado.
+
+`descobrir_site` roda isso por objetivo com try/except independente —
+`tests/test_scraper_discovery.py` cobre explicitamente que uma falha de
+provider (`ProviderError`) num objetivo e uma saída fora do schema
+(`OutputParseError`, de um `pydantic.ValidationError` capturado) noutro
+objetivo não vazam um pro outro, nem derrubam o terceiro que teve sucesso.
+
+### 14.5 Motor de extração (`src/scraper/engine.py`, `extractor.py`) — determinístico, sem LLM
+
+`ScraperEngine.executar` — mesmo shape de `GovEngine.executar`
+(§13.5): dispatch por objetivo, cada `_passo_*` num try/except próprio →
+`resultado.falhar(...)` nunca propaga, agregação final `PARCIAL`/`FALHOU`/
+`OK`. Cada passo busca o HTML de novo (Playwright), extrai via
+`extractor.extrair_*` (BeautifulSoup, usando o `MapaSeletor.selectors`
+já salvo — sem LLM nenhum aqui) e grava no BigQuery.
+
+Tabelas (`schemas.py`) — todas append (logs históricos, não catálogo
+recarregado):
+
+| Tabela | Grão | Dedupe |
+|---|---|---|
+| `scraper_ficha_tecnica` | `(site_id, marca, modelo, versao, atributo, coletado_em)` | nenhum — histórico puro, valor de atributo pode mudar com o tempo |
+| `scraper_anuncios` | `(site_id, marca, modelo, versao, ano, url_anuncio)` | anti-join antes do upsert — mesma página rodada 2x não duplica anúncio |
+| `scraper_comentarios` | `(site_id, marca, modelo, versao, ano, url_origem, texto)` | anti-join antes do upsert |
+
+`tests/test_scraper_engine.py` cobre as duas garantias centrais: rodar a
+mesma configuração duas vezes faz `ficha_tecnica` crescer (histórico) mas
+NÃO duplica `anuncios`/`comentarios`; e um objetivo com fetch quebrado
+(`FetchError`) deixa a execução `partial`, sem impedir os outros dois de
+concluir e gravar.
+
+### 14.6 API (`src/api/scraper_api.py`, prefixo `/scraper`)
+
+Mesmo shape de `gov_api.py` (CRUD + run/status/versions/runs/generate-dag/
+dag), mais o que é específico deste módulo. Desde o §14.11 (cadeia de
+etapas), a granularidade de mapeamento/teste é **por etapa**, não mais por
+objetivo inteiro — o `POST .../test` plano de um objetivo foi removido:
+
+- `GET /scraper/config` — providers disponíveis + lista curada de modelos
+  por provider (`src/scraper/modelos_llm.py`), no mesmo formato de
+  `GET /youtube/config` — alimenta os `<select>` de provider/modelo no
+  cadastro (§14.11).
+- CRUD de etapas por objetivo (`POST`/`PUT`/`DELETE .../etapas[/{ordem}]`,
+  `POST .../etapas/reorder`) — ver §14.11.
+- `POST .../etapas/{ordem}/discover` — roda a descoberta (LLM) só nesta
+  etapa, mescla o resultado como rascunho (não valida, não registra).
+- `POST .../etapas/{ordem}/test` — extração síncrona e determinística
+  (sem LLM) contra os seletores informados (editáveis) ou os já
+  descobertos, só desta etapa — mesmo papel de `POST /prompts/{id}/test`
+  (`src/api/prompts_api.py`). Sucesso (`len(linhas) > 0`) marca
+  `validado_em` **dessa etapa**; o objetivo só fica "pronto" quando toda
+  etapa da cadeia estiver validada (`MapaSeletor.pronto()`). A resposta
+  também inclui `resumo_ia` — o resumo em linguagem natural gerado por
+  `discovery.gerar_resumo_confirmacao()` sobre a amostra extraída (§14.3,
+  ponto 2) — nunca bloqueia a resposta, vira uma frase de aviso se essa
+  chamada de IA falhar.
+- `POST .../etapas/{ordem}/detectar-filtros` — parsing determinístico de
+  query string + classificação por LLM contra o vocabulário fixo de
+  filtro (§14.11); persiste `filtros`/`url_template` na etapa.
+- `POST /scraper/sites/{id}/discover` — roda a descoberta em toda etapa de
+  todo objetivo pedido (rascunho, isolamento de falha por etapa).
+- `POST /scraper/sites/{id}/register` — exige `validado_em` preenchido em
+  **toda etapa de todo** objetivo escolhido (`site.objetivos_prontos()`);
+  versiona, `registrado=true`, `status=active`.
+- `POST /scraper/sites/{id}/run` — aceita `filtros: dict[str,str]`
+  opcional (ex.: `{"marca": "Fiat"}`), substituído no `url_template` da
+  etapa 0 antes do fan-out (§14.11) — é o que fecha o loop de "consultar o
+  site dinamicamente" depois de registrado.
+- `GET /scraper/dados/ficha-tecnica|anuncios|comentarios` — leitura do
+  BigQuery, filtros opcionais `site_id`/`marca`/`modelo`.
+
+`/config`, `/discover` e `/test`/`/detectar-filtros` (site e etapa) não
+dependem de BigQuery (só Playwright + LLM); `/register`/`/run`/`/dados/*`
+dependem — 503 sem `GOOGLE_APPLICATION_CREDENTIALS`, mesmo contrato de
+`gov_api.py::_exigir_configurado`.
+
+### 14.7 Frontend (`app/templates/scraper/`, `app/static/scraper/`)
+
+Fluxo **cadastrar → mapear → testar cada etapa → registrar** — não existia
+um wizard multi-passo no projeto antes disso; reaproveita o vocabulário
+visual já estabelecido (`.painel`/`.campo`/`.grade`/`.btn`/`.modal`/
+`.tabela`/`.selo`/`.pipeline-card`→`.site-card`/`.dobra`) em vez de
+inventar um novo. A visualização da cadeia de etapas (§14.11) é aditiva:
+`.fluxo-etapas`/`.fluxo-etapa`/`.fluxo-seta`.
+
+- **Cadastro** (modal): nome, URL base, checkboxes de objetivo
+  (`comentarios` só habilita se `anuncios` estiver marcado — mesma regra
+  do backend, checada nos dois lados), uma URL de amostra por objetivo,
+  `<select>` de provider (alimentado por `GET /scraper/config`, com selo
+  "configurado"/"sem credencial") + `<select>` de modelo curado por
+  provider com opção final "Custom/outro…" que revela um input de texto
+  livre (protege contra a lista curada ficar desatualizada).
+- **Mapear**: `POST .../discover` (site inteiro), atualiza o rascunho de
+  seletores de cada etapa no backend — o usuário abre a caixa da etapa
+  pra conferir/testar (feedback por etapa, reflete o isolamento de falha
+  do §14.4/§14.11).
+- **Fluxo por objetivo**: cada objetivo desenha suas etapas como caixas
+  ligadas por um conector (`→`, rotulado com o `campo_herdado`) — clicar
+  numa caixa abre o modal de configuração daquela etapa; "+ etapa" anexa
+  uma nova etapa no fim da cadeia; "×" remove (reindexa e invalida o
+  teste das etapas restantes).
+- **Modal de etapa**: URL de amostra; seletores fixos (última etapa do
+  objetivo) ou uma lista livre de campos nomeados + seletor de linha
+  (etapa intermediária de navegação) + campo de texto pra indicar qual
+  desses campos é herdado pela próxima etapa; painel de filtros de URL
+  com botão "Detectar filtros" (mostra `nome_param`/`valor_amostra`/
+  `<select>` de papel); botões "Mapear com IA" e "Testar" — teste mostra
+  **resumo da IA** (`.scraper-resumo-ia`, 1-2 frases perguntando "é
+  exatamente isso que essa página deveria mostrar?") + tabela de prévia
+  com a coluna-chave do objetivo (preço/valor do atributo/nota) destacada
+  em negrito/cor de destaque (`.tabela__coluna-chave`).
+- **Site registrado**: card com selo de status, "Executar agora" (polling
+  em `GET /scraper/runs/{run_id}`, mesmo padrão do Gov Mode), histórico de
+  execuções, código da DAG, e uma dobra "Dados coletados" (filtro de
+  marca/modelo + uma tabela por objetivo, lendo `GET /scraper/dados/*`).
+
+### 14.8 Config (`src/config.py`) e proxy
+
+`# ── Scraper (auto-discovery) ──`: `scraper_bigquery_dataset` (default
+`scraper_ford`), `scraper_proxy_list_url`/`scraper_proxy_list_path`
+(mesma prioridade do §8), `scraper_playwright_headless`/
+`_timeout_ms`/`scraper_discovery_max_html_chars`. Nenhuma variável nova de
+LLM — `ConfigLLM` por site já cai pro `LLM_PROVIDER`/`LLM_MODEL` globais.
+
+**Dependência nova**: `playwright` (`requirements.txt`) — depois do `pip
+install`, é preciso rodar **uma vez** `playwright install chromium`
+(baixa o binário do navegador; não é `pip install` normal). Nenhuma outra
+dependência do projeto precisa desse passo extra.
+
+### 14.9 Testes
+
+- `tests/test_scraper_warehouse.py` — `BigQueryWarehouse` genérico, as 3
+  tabelas gravam `WRITE_APPEND`, conversão pyarrow real.
+- `tests/test_scraper_url_utils.py` — `extrair_query_params`/
+  `montar_template` (`src/scraper/url_utils.py`, puro, sem LLM/rede):
+  múltiplos parâmetros, sem query string, chave duplicada, papel `outro`
+  não colide, `.format()` do template gerado é válido de verdade.
+- `tests/test_scraper_discovery.py` — dublê de `Agente` (decide a resposta
+  por um marcador no HTML recebido) + dublê de `browser.buscar_html`:
+  sucesso valida contra o Pydantic certo; falha de provider e saída fora
+  do schema ficam isoladas por objetivo; página fora do ar e falta de URL
+  de amostra viram erro tipado, nunca exceção. Seção 2 cobre
+  `descobrir_etapa(ultima=False)` contra `SeletorEtapaIntermediaria`.
+  Seção 5 cobre `gerar_resumo_confirmacao`: não chama a IA à toa quando
+  não há dado extraído, o resumo reflete a amostra recebida, e falha do
+  provider vira frase de aviso, nunca exceção. Seção 6 cobre
+  `classificar_filtros`/`detectar_filtros`: parâmetro conhecido
+  classificado certo, parâmetro fora do vocabulário cai em `outro`, sem
+  query string não chama a IA à toa.
+- `tests/test_scraper_engine.py` — dublê de warehouse (anti-join em
+  memória) + `browser.buscar_html`: um objetivo falhando não derruba os
+  outros (`partial`); ficha técnica cresce (histórico) mas anúncios não
+  duplicam ao rodar duas vezes; objetivo sem seletor mapeado é pulado, não
+  falha. Seção 4 cobre a cadeia de 2 etapas (fan-out real): uma listagem
+  com 3 linhas gera 3 fetches na etapa seguinte, uma delas quebrada —
+  confirma 2/3 sobreviventes, linhas vindas dos DOIS detalhes diferentes
+  (não é só reusar a amostra), e o passo ainda fecha `success`.
+- `tests/test_scraper_pipeline.py` — CRUD/versionamento do store (mudar a
+  URL-alvo invalida `registrado` e reseeda uma etapa nova, não validada,
+  pra URL atual — não mais um `seletores == {}`), `executor.disparar_site`
+  recusa site não registrado, `executar_agora`/`iniciar_em_background` fim
+  a fim com polling.
+
+**Não coberto por teste automatizado** (verificado manualmente, ver
+§14.10): Playwright de verdade (fetch real + proxy), chamada de LLM real
+ponta a ponta, geração de DAG (`dag_generator.py` — mesmo padrão de
+`test_govmode_dag.py`, ainda não escrito).
+
+### 14.10 Verificação manual de ponta a ponta
+
+1. `pip install -r requirements.txt && playwright install chromium`.
+2. `uvicorn main:app --port 8000` + `flask --app app/app.py run --port 5000`.
+3. Em `/scraper`, cadastrar um site real com `ficha_tecnica`, dando como
+   URL de amostra uma página de **listagem** (não a ficha em si) —
+   confirma o cenário que motivou o §14.11: "antes da ficha técnica,
+   precisa achar o carro".
+4. Na caixa da etapa 0 (fluxo visual), "Mapear com IA" ou preencher à mão
+   `linha`/`campos` (um deles deve ser a URL da ficha); marcar esse campo
+   como herdado; "Testar" — confirma que a etapa fica "Testada" e a
+   prévia mostra uma lista de URLs.
+5. "+ etapa" adiciona a etapa 1 (final); usar como URL de amostra uma das
+   URLs que a etapa 0 acabou de encontrar; mapear/testar com os seletores
+   de `SeletorFichaTecnica` de sempre.
+6. "Detectar filtros" na etapa 0 — confirmar que um parâmetro tipo
+   `fabricante`/`marca` é classificado corretamente e um `url_template`
+   aparece.
+7. "Registrar", "Executar agora", `GET /scraper/runs/{id}` até concluir,
+   conferir em `GET /scraper/dados/ficha-tecnica?site_id=...` que vieram
+   linhas de **vários carros diferentes** (prova que o fan-out
+   multiplicou, não só reusou a amostra da etapa final).
+8. Quebrar uma URL da etapa 0 de propósito (editar pra uma rota 404) e
+   rodar de novo — confirmar que o passo ainda fecha `success`/`partial`
+   com "N-1/N" no resumo, não falha total.
+9. Rodar `POST /scraper/sites/{id}/run` com `{"filtros": {"marca": "..."}}`
+   e confirmar que muda quais carros são raspados.
+10. Remover `GOOGLE_APPLICATION_CREDENTIALS` e confirmar que só
+    `/dados/*`/`/register`/`/run` degradam (503) — `/discover`/`/test`/
+    `/detectar-filtros`/`/config` continuam funcionando.
+
+### 14.11 Cadeia de etapas dependentes, filtros de URL e fluxo visual
+
+Motivado por um caso real que o modelo de "uma URL de amostra por
+objetivo" (§14.1) não cobria: alguns sites exigem **navegar antes de
+extrair** — uma busca/listagem que produz várias linhas (ex.: uma coluna
+`url_anuncio`), cada uma levando a uma página de detalhe própria (ex.: a
+ficha técnica daquele carro específico). É exatamente o padrão que
+`src/utils/CarrosWeb.py` já resolve à mão, hardcoded, pra um site só
+(fabricante → modelo → versões → ficha); esta extensão generaliza esse
+encadeamento pra qualquer site cadastrado, como uma lista de **etapas**
+por objetivo em vez de uma única URL/mapa de seletores.
+
+**Modelo de dados** (`src/scraper/models.py`) — `MapaSeletor` virou um
+envelope sobre `list[EtapaScraper]`:
+
+```python
+class EtapaScraper(BaseModel):
+    id: str
+    ordem: int
+    url_amostra: str
+    url_template: str          # preenchido por .../detectar-filtros
+    filtros: list[FiltroParam]
+    selectors: dict[str, Any]  # forma fixa (última etapa) OU {"linha","campos"} (navegação)
+    campo_herdado: str | None  # None só na ÚLTIMA etapa
+    llm: dict[str, str]
+    descoberto_em: str | None
+    validado_em: str | None
+
+class MapaSeletor(BaseModel):
+    objetivo: TipoObjetivoScraper
+    etapas: list[EtapaScraper]
+
+    def pronto(self) -> bool:
+        return bool(self.etapas) and all(e.validado_em for e in self.etapas)
+```
+
+**Compatibilidade retroativa**: um `model_validator(mode="before")` em
+`MapaSeletor` detecta o formato antigo (dict com `selectors`/`url_amostra`
+no nível raiz, sem chave `etapas`) e embrulha numa lista de uma etapa só —
+o site real já registrado em `data/scraper_sites.json` (`na_pista`,
+descoberto antes desta extensão) carrega sem precisar reeditar o JSON à
+mão.
+
+**Descoberta por etapa** (`src/scraper/discovery.py`) — `descobrir_etapa
+(site, objetivo, etapa, *, ultima)`: quando `ultima=True`, mesmo
+`SELETOR_POR_OBJETIVO[objetivo]` de sempre (§14.4); quando `False`, um
+prompt novo (`PROMPT_ETAPA_NAVEGACAO`) valida contra
+`SeletorEtapaIntermediaria` (`{"linha": "...", "campos": {...}}`) — a IA
+sugere qual campo parece ser o link pra próxima página, o usuário confirma
+via `campo_herdado`.
+
+**Fan-out no motor de execução** (`src/scraper/engine.py::_executar_cadeia`)
+— generaliza o `f"{base_url}/{href}"` manual do `CarrosWeb.py`: busca
+`etapas[0]` uma vez; a partir daí, **cada etapa seguinte é buscada uma vez
+por linha** que a etapa anterior produziu, resolvendo a URL via
+`urljoin(url_anterior, linha[campo_herdado])`. Tolerância parcial: uma
+linha cuja etapa seguinte falhar (fetch quebrado, 404) é pulada e logada —
+só quando **nenhuma** linha sobrevive é que o passo falha (`EmptyData`);
+etapa 0 falhando por inteiro continua sendo falha total (`FetchError`,
+como antes). `extractor.extrair_linhas_genericas(html, selectors, url)` é
+a extração genérica usada nas etapas de navegação (campos link-like —
+nome contendo `url`/`link`/`href` — são resolvidos pra absoluto via
+`urljoin`); os 3 extratores finais (`extrair_ficha_tecnica`/`_anuncios`/
+`_comentarios`) não mudam, continuam rodando só na última etapa.
+
+**Filtros de URL como template reutilizável** — dividido em parte
+determinística e parte LLM (Regra 11 preservada, só `discovery.py` chama
+LLM):
+
+- `src/scraper/url_utils.py` (puro, sem LLM) — `extrair_query_params(url)`
+  (via `urlsplit`/`parse_qsl`) e `montar_template(url, filtros)` (troca
+  cada valor classificado por `{papel}`, preservando os demais).
+- `discovery.py::classificar_filtros(params, llm)` — manda só
+  `{nome_param, valor_amostra}` (sem HTML) pro LLM classificar contra o
+  vocabulário fixo `marca|modelo|versao|ano|id|outro`.
+- `discovery.py::detectar_filtros(url, llm)` orquestra as duas partes;
+  persiste `etapa.filtros`/`etapa.url_template`. Rodar
+  `POST /scraper/sites/{id}/run` com `filtros={"marca": "Fiat"}` substitui
+  o template da etapa 0 antes do fan-out — fecha o loop de "consultar o
+  site dinamicamente" prometido no cadastro.
+
+**Lista curada de modelos por provider** (`src/scraper/modelos_llm.py`,
+novo, fora de `src/agents/providers/` de propósito — aquele módulo existe
+pra ter "um modelo padrão, sem catálogo" por design, §9; generalizar ali
+acoplaria um domínio de UI no genérico à toa): `GET /scraper/config`
+expõe, por provider, `configurado`/`env_var`/`modelo_padrao`/`modelos` —
+o frontend sempre soma uma opção final "Custom/outro…" que revela um
+input de texto livre, porque a lista curada por natureza fica
+desatualizada com o tempo (modelos novos saem depois).
+
+**Fluxo visual sem dependência nova** — a ideia original cogitava um
+editor node-based (Rete.js/React Flow, como um mini n8n); na prática, o
+projeto não tem nenhuma infraestrutura de build (sem Node.js/npm/bundler,
+100% Jinja + JS vanilla), e uma verificação da CDN do Rete.js v1 nesta
+sessão mostrou que os pacotes de renderização vanilla (`rete-area-plugin`/
+`rete-render-plugin`) não têm uma versão 1.x utilizável de verdade —
+adotar isso sem poder verificar o carregamento/render num browser de
+verdade seria um risco desnecessário. A decisão foi usar flexbox + CSS
+puro (`.fluxo-etapas`/`.fluxo-etapa`/`.fluxo-seta` em
+`app/static/scraper/style.css`): caixas numeradas em sequência, ligadas
+por um conector rotulado com o `campo_herdado`, clicáveis (abre o modal de
+configuração daquela etapa) — a mesma leitura visual do objetivo original
+(fluxo de etapas dependentes, ponta a ponta visível), sem puxar uma lib
+externa cujo comportamento não dava pra confirmar neste ambiente.

@@ -24,12 +24,26 @@ Endpoints:
     GET    /gov/fipe
     GET    /gov/resumo                         KPIs do mini dashboard
 
+    GET    /gov/preco/marcas                   busca de preço — direto na
+    GET    /gov/preco/modelos                  parallelum (mesma FipeAPI de
+    GET    /gov/preco/modelo                   src/govmode/client.py). Sempre
+    GET    /gov/preco/valor                    carros — não aceita outro
+                                                tipo_veiculo.
+                                                /preco/modelo já junta o
+                                                catálogo (BigQuery, se
+                                                houver) com o valor ao vivo
+                                                do ano mais recente; /preco/
+                                                valor busca um ano específico
+                                                sob demanda.
+
 Atenção à ordem de declaração: `/runs/{run_id}` e as rotas fixas de
-catálogo precisam vir antes de `/pipelines/{pipeline_id}`, mesmo cuidado
-de `src/api/pipelines_api.py`.
+catálogo/preço precisam vir antes de `/pipelines/{pipeline_id}`, mesmo
+cuidado de `src/api/pipelines_api.py`.
 
 Sem BigQuery configurado, os endpoints de catálogo devolvem 503 — mesmo
-contrato de `src/api/analytics_api.py` (recurso opcional, aditivo).
+contrato de `src/api/analytics_api.py` (recurso opcional, aditivo). Já os
+endpoints `/preco/*` não dependem do BigQuery — só de rede e, no caso de
+`/preco/valor`, de `FIPE_API_TOKEN`.
 """
 import logging
 
@@ -40,6 +54,7 @@ from pydantic import BaseModel
 from src.bigquery_warehouse import registros_serializaveis
 from src.config import settings
 from src.govmode import schemas, warehouse
+from src.govmode.client import FipeAPI, FipeAPIError
 from src.govmode.dag_generator import descrever_schedule, gerar_codigo, gerar_dag, montar_cron, montar_dag_id
 from src.govmode.executor import disparar_pipeline, obter_status
 from src.govmode.models import GovPipelineEntrada, StatusPipeline
@@ -56,6 +71,8 @@ from src.govmode.store import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/gov", tags=["gov"])
+
+_fipe_api = FipeAPI()
 
 
 class StatusRequest(BaseModel):
@@ -247,6 +264,107 @@ async def resumo(tipo_veiculo: str = Query(default="carros")):
         "modelos_com_fipe": qtd_modelos_com_fipe,
         "cobertura_fipe_pct": cobertura,
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Busca de preço — consulta a FipeAPI direto (sem BigQuery), inspirada na
+# seção "#01/busca_de_preco.ts" de fipe.api.br. Sempre carros — o tipo de
+# veículo é fixo no código, não vem de query string. Rotas fixas — também
+# precisam vir antes de /pipelines/{id}.
+# ─────────────────────────────────────────────────────────────────────────────
+
+TIPO_VEICULO_PRECO = "carros"
+
+
+def _erro_fipe(exc: FipeAPIError) -> HTTPException:
+    if exc.motivo == "missing_token":
+        return HTTPException(503, detail={"erro": str(exc), "motivo": exc.motivo})
+    if exc.motivo in ("timeout", "network"):
+        return HTTPException(502, detail={"erro": str(exc), "motivo": exc.motivo})
+    return HTTPException(exc.status or 502, detail={"erro": str(exc), "motivo": exc.motivo})
+
+
+@router.get("/preco/marcas")
+async def preco_marcas():
+    """Marcas de carro direto da parallelum — sem passar pelo catálogo do BigQuery."""
+    try:
+        marcas = await _fipe_api.buscar_marcas(TIPO_VEICULO_PRECO)
+    except FipeAPIError as exc:
+        raise _erro_fipe(exc) from exc
+
+    return {"marcas": marcas}
+
+
+@router.get("/preco/modelos")
+async def preco_modelos(marca_codigo: str):
+    try:
+        modelos = await _fipe_api.buscar_modelos(TIPO_VEICULO_PRECO, marca_codigo)
+    except FipeAPIError as exc:
+        raise _erro_fipe(exc) from exc
+
+    return {"modelos": modelos}
+
+
+@router.get("/preco/modelo")
+async def preco_modelo(marca_codigo: str, modelo_codigo: str):
+    """Visão unificada — catálogo (BigQuery) + busca de preço — pra não
+    exigir um passo extra de "selecionar o ano": todos os anos ao vivo
+    (FipeAPI), já com o código FIPE dos anos que o catálogo tiver mapeado
+    de execuções passadas da pipeline (barato, sem chamada externa), mais
+    o valor ao vivo do ano mais recente (`atual`, único que soma uma
+    chamada com token à parallelum)."""
+    try:
+        anos = await _fipe_api.buscar_anos(TIPO_VEICULO_PRECO, marca_codigo, modelo_codigo)
+    except FipeAPIError as exc:
+        raise _erro_fipe(exc) from exc
+
+    fipe_tabela = warehouse.table_id(schemas.MODELOS_COM_FIPE)
+    linhas_catalogo = _executar_catalogo(f"""
+        SELECT ano_codigo, codigo_fipe, atualizado_em
+        FROM `{fipe_tabela}`
+        WHERE marca_codigo = @marca AND modelo_codigo = @modelo AND tipo_veiculo = @tipo
+    """, [
+        bigquery.ScalarQueryParameter("marca", "STRING", marca_codigo),
+        bigquery.ScalarQueryParameter("modelo", "STRING", modelo_codigo),
+        bigquery.ScalarQueryParameter("tipo", "STRING", TIPO_VEICULO_PRECO),
+    ])
+    mapeados = {linha["ano_codigo"]: linha for linha in linhas_catalogo}
+
+    anos_resposta = []
+    for ano in anos:
+        info = mapeados.get(ano.get("codigo"))
+        anos_resposta.append({
+            "codigo": ano.get("codigo"),
+            "nome": ano.get("nome"),
+            "codigo_fipe": info["codigo_fipe"] if info else None,
+            "atualizado_em": info["atualizado_em"] if info else None,
+        })
+
+    atual = None
+    if anos_resposta:
+        try:
+            atual = await _fipe_api.buscar_codigo_fipe(
+                TIPO_VEICULO_PRECO, marca_codigo, modelo_codigo, anos_resposta[0]["codigo"]
+            )
+        except FipeAPIError as exc:
+            # não derruba a resposta inteira — a tabela de anos continua útil
+            # mesmo se só o destaque do ano mais recente falhar.
+            atual = {"erro": str(exc), "motivo": exc.motivo}
+
+    return {"anos": anos_resposta, "atual": atual}
+
+
+@router.get("/preco/valor")
+async def preco_valor(marca_codigo: str, modelo_codigo: str, ano_codigo: str):
+    """Preço do (marca, modelo, ano) — único passo que exige FIPE_API_TOKEN."""
+    try:
+        preco = await _fipe_api.buscar_codigo_fipe(
+            TIPO_VEICULO_PRECO, marca_codigo, modelo_codigo, ano_codigo
+        )
+    except FipeAPIError as exc:
+        raise _erro_fipe(exc) from exc
+
+    return preco
 
 
 # ─────────────────────────────────────────────────────────────────────────────

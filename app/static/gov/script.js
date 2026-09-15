@@ -1,19 +1,18 @@
 /* ============================================================
-   GOV MODE — catálogo FIPE (marca/modelo/ano) e pipelines de extração.
+   GOV MODE — catálogo & busca de preço FIPE (marca/modelo/ano,
+   unificados numa única seção) e pipelines de extração.
    O JavaScript não executa regra de negócio: só coleta entrada, chama
    /api/gov/* e desenha o que o backend devolve.
    ============================================================ */
 (function () {
   'use strict';
 
-  var pagina = document.querySelector('[data-tipo-veiculo]');
+  var pagina = document.querySelector('[data-combobox-marca]');
   if (!pagina) return;
 
   var estado = {
     tipoVeiculo: 'carros',
-    marcaCodigo: '',
-    modeloCodigo: '',
-    marcasCatalogadas: [],   // [{marca_codigo, marca_nome, total_modelos}]
+    marcasCatalogadas: [],   // [{marca_codigo, marca_nome, total_modelos}] — datalist da pipeline
     pipelines: [],
     timers: {}
   };
@@ -55,7 +54,9 @@
       return r.json().catch(function () { return {}; }).then(function (json) {
         if (!r.ok) {
           var detalhe = json.detail || json;
-          throw new Error(detalhe.erro || detalhe.message || json.erro || ('Erro ' + r.status));
+          var erro = new Error(detalhe.erro || detalhe.message || json.erro || ('Erro ' + r.status));
+          erro.motivo = detalhe.motivo;
+          throw erro;
         }
         return json;
       });
@@ -104,36 +105,16 @@
     });
   }
 
-  // ── Catálogo ───────────────────────────────────────────────────────────
+  // ── Datalist de marcas conhecidas ────────────────────────────────────────
+  // Só alimenta o <datalist> do campo "Marcas-alvo" da pipeline (autocomplete)
+  // — não é mais um select navegável, isso virou o combobox unificado abaixo.
 
-  function carregarMarcas() {
-    var select = $('[data-cat-marca]');
-    select.innerHTML = '<option value="">Carregando…</option>';
-    select.disabled = true;
-    resetarModelos('Selecione a marca primeiro');
-    resetarFipe('Escolha marca e modelo para listar os anos e códigos FIPE.');
-
-    api('GET', '/marcas?tipo_veiculo=' + encodeURIComponent(estado.tipoVeiculo)).then(function (r) {
+  function carregarMarcasCatalogo() {
+    api('GET', '/marcas?tipo_veiculo=carros').then(function (r) {
       estado.marcasCatalogadas = r.marcas || [];
-      select.disabled = false;
-
-      if (!estado.marcasCatalogadas.length) {
-        select.innerHTML = '<option value="">Nenhuma marca catalogada ainda</option>';
-        atualizarDatalistMarcas();
-        return;
-      }
-
-      select.innerHTML = '<option value="">Selecione…</option>' +
-        estado.marcasCatalogadas.map(function (m) {
-          return '<option value="' + esc(m.marca_codigo) + '">' + esc(m.marca_nome) +
-            ' (' + numero(m.total_modelos) + ' modelo(s))</option>';
-        }).join('');
-
       atualizarDatalistMarcas();
-      preSelecionarMarcaDaQuery();
-    }).catch(function (erro) {
-      select.innerHTML = '<option value="">Falha ao carregar</option>';
-      avisarPagina('Não foi possível carregar as marcas: ' + erro.message);
+    }).catch(function () {
+      // cosmético (autocomplete) — falha aqui não deve impedir o resto da página.
     });
   }
 
@@ -145,122 +126,319 @@
     }).join('');
   }
 
-  // Contextualização: se a página abriu com ?marca=X e X bate (case-insensitive)
-  // com uma marca_nome já catalogada, pré-seleciona o filtro — cosmético, sem
-  // acoplar a identidade FIPE (numérica) com a do specs_api (nomes de scraping).
+  // ── Catálogo & busca de preço, unificados (mold: fipe.api.br #01/busca_de_preco.ts) ──
+  // Marca/Modelo vêm ao vivo da FipeAPI (/api/gov/preco/*), sempre carros,
+  // como combobox filtrável (lista inteira carregada de uma vez, filtrada
+  // localmente conforme o usuário digita — sem round-trip por tecla). Ao
+  // escolher o modelo, carrega tudo de uma vez (/preco/modelo): destaque do
+  // ano mais recente (valor ao vivo) + tabela com todos os anos, já trazendo
+  // o código FIPE dos anos que o catálogo (BigQuery) já tiver mapeado — sem
+  // precisar de um passo extra pra "selecionar o ano".
+
+  var estadoBusca = { marcaCodigo: '', modeloCodigo: '' };
+
+  function formatarMoeda(valor) {
+    if (valor === null || valor === undefined || valor === '') return '—';
+    var numero = typeof valor === 'number' ? valor : parseFloat(
+      String(valor).replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')
+    );
+    return isNaN(numero) ? String(valor) : numero.toLocaleString('pt-BR', {
+      style: 'currency', currency: 'BRL'
+    });
+  }
+
+  function avisarBusca(texto, tipo) {
+    avisar($('[data-busca-aviso]'), texto, tipo);
+  }
+
+  function resetarResultadoBusca(mensagem) {
+    $('[data-busca-resultado]').innerHTML = mensagem
+      ? '<div class="vazio vazio--compacto">' + esc(mensagem) + '</div>' : '';
+  }
+
+  function mensagemErroBusca(erro) {
+    if (erro && erro.motivo === 'missing_token') {
+      return 'FIPE_API_TOKEN não configurado no servidor — só a busca de preço exige esse token.';
+    }
+    return erro.message;
+  }
+
+  /** Combobox filtrável: input de texto + lista suspensa filtrada localmente
+   * a partir de uma lista já carregada (sem round-trip por tecla). */
+  function criarCombobox(seletorRaiz, opcoes) {
+    var raiz = $(seletorRaiz);
+    var input = $('.combobox__input', raiz);
+    var valorOculto = $('[data-combobox-valor]', raiz);
+    var lista = $('[data-combobox-lista]', raiz);
+
+    var itens = [];
+    var filtrados = [];
+    var ativo = -1;
+    var selecionado = null;
+
+    function render() {
+      lista.innerHTML = filtrados.length
+        ? filtrados.map(function (item, i) {
+            return '<div class="combobox__opcao' + (i === ativo ? ' combobox__opcao--ativa' : '') +
+              '" data-indice="' + i + '">' + esc(opcoes.getTexto(item)) + '</div>';
+          }).join('')
+        : '<div class="combobox__vazio">Nenhum resultado</div>';
+      lista.hidden = false;
+    }
+
+    function filtrar(termo) {
+      var alvo = (termo || '').trim().toLowerCase();
+      filtrados = !alvo ? itens.slice() : itens.filter(function (item) {
+        return opcoes.getTexto(item).toLowerCase().indexOf(alvo) !== -1;
+      });
+      ativo = filtrados.length ? 0 : -1;
+    }
+
+    function abrir() {
+      if (input.disabled) return;
+      filtrar(input.value);
+      render();
+    }
+
+    function fechar() {
+      lista.hidden = true;
+      ativo = -1;
+    }
+
+    function selecionarItem(item) {
+      selecionado = item;
+      input.value = opcoes.getTexto(item);
+      valorOculto.value = opcoes.getCodigo(item);
+      fechar();
+      if (opcoes.aoSelecionar) opcoes.aoSelecionar(item);
+    }
+
+    input.addEventListener('focus', abrir);
+    input.addEventListener('click', abrir);
+
+    input.addEventListener('input', function () {
+      if (selecionado && input.value !== opcoes.getTexto(selecionado)) {
+        selecionado = null;
+        valorOculto.value = '';
+      }
+      filtrar(input.value);
+      render();
+    });
+
+    input.addEventListener('keydown', function (evento) {
+      if (lista.hidden && (evento.key === 'ArrowDown' || evento.key === 'ArrowUp')) {
+        abrir();
+        return;
+      }
+      if (evento.key === 'ArrowDown') {
+        evento.preventDefault();
+        ativo = Math.min(ativo + 1, filtrados.length - 1);
+        render();
+      } else if (evento.key === 'ArrowUp') {
+        evento.preventDefault();
+        ativo = Math.max(ativo - 1, 0);
+        render();
+      } else if (evento.key === 'Enter') {
+        evento.preventDefault();
+        if (ativo >= 0 && filtrados[ativo]) selecionarItem(filtrados[ativo]);
+      } else if (evento.key === 'Escape') {
+        fechar();
+      }
+    });
+
+    lista.addEventListener('mousedown', function (evento) {
+      var alvo = evento.target.closest('[data-indice]');
+      if (!alvo) return;
+      evento.preventDefault();
+      var indice = Number(alvo.dataset.indice);
+      if (filtrados[indice]) selecionarItem(filtrados[indice]);
+    });
+
+    input.addEventListener('blur', function () {
+      setTimeout(function () {
+        fechar();
+        input.value = selecionado ? opcoes.getTexto(selecionado) : '';
+        if (!selecionado) valorOculto.value = '';
+      }, 120);
+    });
+
+    return {
+      definirOpcoes: function (novosItens, mensagemVazia) {
+        itens = novosItens || [];
+        selecionado = null;
+        input.value = '';
+        valorOculto.value = '';
+        input.disabled = !itens.length;
+        input.placeholder = itens.length ? opcoes.placeholder : (mensagemVazia || 'Nenhuma opção');
+        fechar();
+      },
+      desabilitar: function (mensagem) {
+        itens = [];
+        selecionado = null;
+        input.value = '';
+        valorOculto.value = '';
+        input.disabled = true;
+        input.placeholder = mensagem || '';
+        fechar();
+      },
+      selecionarPorPredicado: function (predicado) {
+        var achado = itens.filter(predicado)[0];
+        if (achado) selecionarItem(achado);
+      }
+    };
+  }
+
+  var comboboxMarca = criarCombobox('[data-combobox-marca]', {
+    getTexto: function (m) { return m.nome; },
+    getCodigo: function (m) { return m.codigo; },
+    placeholder: 'Selecione a marca…',
+    aoSelecionar: function (m) { selecionarMarcaBusca(m.codigo); }
+  });
+
+  var comboboxModelo = criarCombobox('[data-combobox-modelo]', {
+    getTexto: function (m) { return m.nome; },
+    getCodigo: function (m) { return m.codigo; },
+    placeholder: 'Selecione o modelo…',
+    aoSelecionar: function (m) { selecionarModeloBusca(m.codigo); }
+  });
+
+  function resetarTabelaBusca(mensagem) {
+    $('[data-busca-tabela]').innerHTML = '<div class="vazio vazio--compacto">' + esc(mensagem) + '</div>';
+  }
+
+  function carregarMarcasBusca() {
+    comboboxMarca.desabilitar('Carregando…');
+    comboboxModelo.desabilitar('Selecione a marca primeiro');
+    resetarResultadoBusca('');
+    resetarTabelaBusca('Escolha marca e modelo para ver o histórico de anos.');
+    avisarBusca('');
+
+    api('GET', '/preco/marcas').then(function (r) {
+      comboboxMarca.definirOpcoes(r.marcas || [], 'Nenhuma marca encontrada');
+      preSelecionarMarcaDaQuery();
+    }).catch(function (erro) {
+      comboboxMarca.desabilitar('Falha ao carregar');
+      avisarBusca(mensagemErroBusca(erro), 'erro');
+    });
+  }
+
+  // Contextualização: se a página abriu com ?marca=X, seleciona no combobox
+  // (mesmo comportamento do antigo select do catálogo).
   function preSelecionarMarcaDaQuery() {
     var alvo = (window.GOV_MARCA_QUERY || '').trim().toLowerCase();
-    if (!alvo || estado.marcaCodigo) return;
+    if (!alvo || estadoBusca.marcaCodigo) return;
 
-    var achada = estado.marcasCatalogadas.filter(function (m) {
-      return (m.marca_nome || '').trim().toLowerCase() === alvo;
-    })[0];
-
-    if (achada) {
-      $('[data-cat-marca]').value = achada.marca_codigo;
-      selecionarMarca(achada.marca_codigo);
-    }
-  }
-
-  function resetarModelos(mensagem) {
-    var select = $('[data-cat-modelo]');
-    select.innerHTML = '<option value="">' + esc(mensagem) + '</option>';
-    select.disabled = true;
-    estado.modeloCodigo = '';
-  }
-
-  function resetarFipe(mensagem) {
-    $('[data-tabela-fipe]').innerHTML = '<div class="vazio vazio--compacto">' + esc(mensagem) + '</div>';
-    $('[data-resumo-catalogo]').textContent = 'Selecione marca e modelo para ver os anos disponíveis.';
-  }
-
-  function selecionarMarca(marcaCodigo) {
-    estado.marcaCodigo = marcaCodigo;
-    resetarFipe('Escolha um modelo para listar os anos e códigos FIPE.');
-
-    if (!marcaCodigo) {
-      resetarModelos('Selecione a marca primeiro');
-      return;
-    }
-
-    var select = $('[data-cat-modelo]');
-    select.innerHTML = '<option value="">Carregando…</option>';
-    select.disabled = true;
-
-    api('GET', '/modelos?marca_codigo=' + encodeURIComponent(marcaCodigo) +
-      '&tipo_veiculo=' + encodeURIComponent(estado.tipoVeiculo)).then(function (r) {
-      var modelos = r.modelos || [];
-      select.disabled = false;
-
-      if (!modelos.length) {
-        select.innerHTML = '<option value="">Nenhum modelo catalogado ainda</option>';
-        return;
-      }
-
-      select.innerHTML = '<option value="">Selecione…</option>' +
-        modelos.map(function (m) {
-          return '<option value="' + esc(m.modelo_codigo) + '">' + esc(m.modelo_nome) +
-            ' (' + numero(m.total_anos) + ' ano(s))</option>';
-        }).join('');
-    }).catch(function (erro) {
-      select.innerHTML = '<option value="">Falha ao carregar</option>';
-      avisarPagina('Não foi possível carregar os modelos: ' + erro.message);
+    comboboxMarca.selecionarPorPredicado(function (m) {
+      return (m.nome || '').trim().toLowerCase() === alvo;
     });
   }
 
-  function selecionarModelo(modeloCodigo) {
-    estado.modeloCodigo = modeloCodigo;
+  function selecionarMarcaBusca(marcaCodigo) {
+    estadoBusca.marcaCodigo = marcaCodigo;
+    estadoBusca.modeloCodigo = '';
+    resetarResultadoBusca('');
+    resetarTabelaBusca('Escolha um modelo para ver o histórico de anos.');
 
-    if (!modeloCodigo) {
-      resetarFipe('Escolha um modelo para listar os anos e códigos FIPE.');
-      return;
-    }
+    comboboxModelo.desabilitar('Carregando…');
+    avisarBusca('');
 
-    $('[data-tabela-fipe]').innerHTML = '<div class="vazio vazio--compacto">Carregando…</div>';
-
-    api('GET', '/fipe?marca_codigo=' + encodeURIComponent(estado.marcaCodigo) +
-      '&modelo_codigo=' + encodeURIComponent(modeloCodigo) +
-      '&tipo_veiculo=' + encodeURIComponent(estado.tipoVeiculo)).then(function (r) {
-      var anos = r.anos || [];
-
-      if (!anos.length) {
-        $('[data-tabela-fipe]').innerHTML = '<div class="vazio vazio--compacto">' +
-          'Nenhum ano com código FIPE resolvido para este modelo ainda.</div>';
-        $('[data-resumo-catalogo]').textContent = 'Nenhum ano catalogado.';
-        return;
-      }
-
-      $('[data-resumo-catalogo]').textContent = anos.length + ' ano(s) com código FIPE.';
-      $('[data-tabela-fipe]').innerHTML = '' +
-        '<table class="tabela">' +
-          '<thead><tr><th>Ano/combustível</th><th>Código FIPE</th><th>Atualizado em</th></tr></thead>' +
-          '<tbody>' + anos.map(function (a) {
-            return '<tr>' +
-              '<td>' + esc(a.ano_modelo || a.ano_codigo) + '</td>' +
-              '<td class="dado-mono">' + esc(a.codigo_fipe) + '</td>' +
-              '<td class="dado-mono">' + esc(dataHora(a.atualizado_em)) + '</td>' +
-            '</tr>';
-          }).join('') + '</tbody>' +
-        '</table>';
+    api('GET', '/preco/modelos?marca_codigo=' + encodeURIComponent(marcaCodigo)).then(function (r) {
+      comboboxModelo.definirOpcoes(r.modelos || [], 'Nenhum modelo encontrado');
     }).catch(function (erro) {
-      $('[data-tabela-fipe]').innerHTML = '<div class="vazio vazio--compacto">' + esc(erro.message) + '</div>';
+      comboboxModelo.desabilitar('Falha ao carregar');
+      avisarBusca(mensagemErroBusca(erro), 'erro');
     });
   }
 
-  $('[data-tipo-veiculo]').addEventListener('change', function (evento) {
-    estado.tipoVeiculo = evento.target.value;
-    $('[data-pl-tipo]').value = estado.tipoVeiculo;
-    carregarResumo();
-    carregarMarcas();
-  });
+  function selecionarModeloBusca(modeloCodigo) {
+    estadoBusca.modeloCodigo = modeloCodigo;
 
-  $('[data-cat-marca]').addEventListener('change', function (evento) {
-    selecionarMarca(evento.target.value);
-  });
+    $('[data-busca-resultado]').innerHTML = '<div class="vazio vazio--compacto">Consultando…</div>';
+    resetarTabelaBusca('Consultando…');
+    avisarBusca('');
 
-  $('[data-cat-modelo]').addEventListener('change', function (evento) {
-    selecionarModelo(evento.target.value);
-  });
+    api('GET', '/preco/modelo?marca_codigo=' + encodeURIComponent(estadoBusca.marcaCodigo) +
+      '&modelo_codigo=' + encodeURIComponent(modeloCodigo)).then(function (r) {
+      renderDestaqueBusca(r.atual);
+      renderTabelaBusca(r.anos || [], r.atual);
+    }).catch(function (erro) {
+      resetarResultadoBusca(mensagemErroBusca(erro));
+      resetarTabelaBusca(mensagemErroBusca(erro));
+    });
+  }
+
+  function renderDestaqueBusca(atual) {
+    if (!atual || atual.erro) {
+      resetarResultadoBusca(atual ? mensagemErroBusca(atual)
+        : 'Nenhum ano encontrado para este modelo.');
+      return;
+    }
+
+    $('[data-busca-resultado]').innerHTML = '' +
+      '<div class="busca-preco__resultado">' +
+        '<div class="busca-preco__rotulo">valor de referência' +
+          (atual.MesReferencia ? ' · ' + esc(atual.MesReferencia) : '') + '</div>' +
+        '<div class="busca-preco__preco">' + esc(formatarMoeda(atual.Valor)) + '</div>' +
+        '<p class="busca-preco__descricao">› ' + esc(atual.Marca) + ' ' + esc(atual.Modelo) +
+          (atual.AnoModelo ? ' <span class="busca-preco__ano">(' + esc(atual.AnoModelo) + ')</span>' : '') +
+        '</p>' +
+        '<div class="busca-preco__meta">' +
+          dado('código fipe', atual.CodigoFipe) +
+          dado('combustível', atual.Combustivel) +
+          dado('ano modelo', atual.AnoModelo) +
+        '</div>' +
+      '</div>';
+  }
+
+  function renderTabelaBusca(anos, atual) {
+    if (!anos.length) {
+      resetarTabelaBusca('Nenhum ano encontrado para este modelo.');
+      return;
+    }
+
+    $('[data-busca-tabela]').innerHTML = '' +
+      '<table class="tabela">' +
+        '<thead><tr><th>Ano/combustível</th><th>Código FIPE</th><th>Valor</th><th>Catálogo atualizado em</th></tr></thead>' +
+        '<tbody>' + anos.map(function (a, i) {
+          var atualOk = i === 0 && atual && !atual.erro;
+          var codigoFipe = atualOk ? atual.CodigoFipe : a.codigo_fipe;
+          var valorCelula = atualOk
+            ? esc(formatarMoeda(atual.Valor))
+            : '<button type="button" class="btn btn--linha btn--pequeno" data-ver-valor>Ver valor</button>';
+
+          return '<tr data-ano-linha data-ano-codigo="' + esc(a.codigo) + '">' +
+            '<td>' + esc(a.nome) + '</td>' +
+            '<td class="dado-mono" data-codigo-celula>' + (codigoFipe ? esc(codigoFipe) : '—') + '</td>' +
+            '<td class="dado-mono" data-valor-celula>' + valorCelula + '</td>' +
+            '<td class="dado-mono">' + (a.atualizado_em ? esc(dataHora(a.atualizado_em)) : '—') + '</td>' +
+          '</tr>';
+        }).join('') + '</tbody>' +
+      '</table>';
+
+    ligarEventosTabelaBusca();
+  }
+
+  function ligarEventosTabelaBusca() {
+    $$('[data-ver-valor]').forEach(function (botao) {
+      botao.addEventListener('click', function () {
+        var linha = botao.closest('[data-ano-linha]');
+        var anoCodigo = linha.dataset.anoCodigo;
+        botao.disabled = true;
+        botao.textContent = 'Consultando…';
+
+        api('GET', '/preco/valor?marca_codigo=' + encodeURIComponent(estadoBusca.marcaCodigo) +
+          '&modelo_codigo=' + encodeURIComponent(estadoBusca.modeloCodigo) +
+          '&ano_codigo=' + encodeURIComponent(anoCodigo)).then(function (r) {
+          $('[data-valor-celula]', linha).textContent = formatarMoeda(r.Valor);
+          if (r.CodigoFipe) $('[data-codigo-celula]', linha).textContent = r.CodigoFipe;
+        }).catch(function (erro) {
+          botao.disabled = false;
+          botao.textContent = 'Falhou — tentar de novo';
+          avisarBusca(mensagemErroBusca(erro), 'erro');
+        });
+      });
+    });
+  }
 
   // ── Pipelines ──────────────────────────────────────────────────────────
 
@@ -647,6 +825,7 @@
   $('[data-recarregar-pipelines]').addEventListener('click', carregarPipelines);
 
   carregarResumo();
-  carregarMarcas();
+  carregarMarcasCatalogo();
+  carregarMarcasBusca();
   carregarPipelines();
 })();

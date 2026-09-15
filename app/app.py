@@ -8,13 +8,17 @@ Inicia com:
   ou:
     python app/app.py
 """
+import os
+
 import httpx
 from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 
-# URL base da API FastAPI — ajuste se rodar em host/porta diferente
-FASTAPI_BASE = "http://127.0.0.1:8000"
+# URL base da API FastAPI — 127.0.0.1 quando os dois processos rodam na
+# mesma máquina (dev local); no docker-compose, FASTAPI_BASE_URL aponta
+# para o serviço "fastapi" (containers em hosts de rede separados).
+FASTAPI_BASE = os.getenv("FASTAPI_BASE_URL", "http://127.0.0.1:8000")
 
 
 # ---------------------------------------------------------------------------
@@ -62,6 +66,11 @@ def x_search():
 @app.route("/gov")
 def gov():
     return render_template("gov/index.html", **veiculo_selecionado())
+
+
+@app.route("/scraper")
+def scraper():
+    return render_template("scraper/index.html", **veiculo_selecionado())
 
 
 @app.route("/pipeline")

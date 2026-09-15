@@ -265,5 +265,48 @@ class Settings:
         caminho = self.data_dir / "ford_fiap.db"
         return f"sqlite:///{caminho.as_posix()}"
 
+    # ── Scraper (auto-discovery de sites de carro) ──────────────────────────
+
+    @property
+    def scraper_bigquery_dataset(self) -> str:
+        """Dataset onde ficha técnica/anúncios/comentários coletados por
+        sites cadastrados no Scraper Mode são gravados — separado do
+        `govmode_bigquery_dataset` (domínios de dado diferentes, mesmo
+        projeto GCP)."""
+        return os.getenv("SCRAPER_BIGQUERY_DATASET", "scraper_ford")
+
+    @property
+    def scraper_proxy_list_url(self) -> str | None:
+        """Mesma ideia de `youtube_proxy_list_url`, mas pro Scraper Mode —
+        URL de download de uma lista de proxies, prioridade sobre
+        `scraper_proxy_list_path`."""
+        return os.getenv("SCRAPER_PROXY_LIST_URL") or None
+
+    @property
+    def scraper_proxy_list_path(self) -> str | None:
+        """Fallback de `scraper_proxy_list_url` — CSV local
+        `host:porta:usuario:senha`, mesmo formato do YouTube."""
+        return os.getenv("SCRAPER_PROXY_LIST") or None
+
+    @property
+    def scraper_playwright_headless(self) -> bool:
+        return os.getenv("SCRAPER_PLAYWRIGHT_HEADLESS", "true").strip().lower() not in ("false", "0", "")
+
+    @property
+    def scraper_playwright_timeout_ms(self) -> int:
+        try:
+            return int(os.getenv("SCRAPER_PLAYWRIGHT_TIMEOUT_MS", "20000"))
+        except ValueError:
+            return 20000
+
+    @property
+    def scraper_discovery_max_html_chars(self) -> int:
+        """Corte do HTML simplificado antes de mandar pro LLM — evita gastar
+        tokens (e estourar limite de contexto) com página inteira."""
+        try:
+            return int(os.getenv("SCRAPER_DISCOVERY_MAX_HTML_CHARS", "40000"))
+        except ValueError:
+            return 40000
+
 
 settings = Settings()

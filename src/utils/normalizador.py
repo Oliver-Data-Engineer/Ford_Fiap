@@ -12,7 +12,8 @@ Uso:
         },
         atributos_desejados=["motor", "potência"],
     )
-    # => [{"atributo": "Motor", "valor": "2.0 Turbo", "fonte": "carrosnaweb"}, ...]
+    # => [{"atributo": "Motor", "valor": "2.0 Turbo", "fonte": "carrosnaweb",
+    #      "categoria": "Motor & Transmissão"}, ...]
 """
 import logging
 import re
@@ -24,6 +25,114 @@ logger = logging.getLogger(__name__)
 MAX_ATRIBUTO = 200
 MAX_VALOR    = 500
 MAX_FONTE    = 100
+
+# ── Categorização dos atributos ──────────────────────────────────────────────
+# Taxonomia baseada nas 14 seções de "FIAP-Ford - Data sheet_Desafio_01_v02.xlsx"
+# (ficha de equipamentos do Ford Ranger por versão) — cada categoria carrega um
+# conjunto de palavras-chave derivadas dos próprios nomes de linha da planilha.
+# Casamento por PALAVRA/FRASE INTEIRA (com \b), case/acento-insensitive — não
+# por substring cru, que gera falso positivo (ex.: "aro" dentro de "farol",
+# "eletric" dentro de "elétrico" usado como adjetivo genérico em teto/vidro/
+# banco). A primeira categoria cujo termo aparecer no atributo vence. Sem
+# correspondência → "Outros".
+CATEGORIAS: list[str] = [
+    "Motor & Transmissão",
+    "Rodas & Pneus",
+    "Conectividade",
+    "Multimídia & Som",
+    "Ar-condicionado",
+    "Segurança",
+    "Alta Tecnologia",
+    "Vidros & Travas",
+    "Acabamento Interno",
+    "Teto Solar",
+    "Bancos",
+    "Iluminação",
+    "Tração 4x4",
+    "Outros",
+]
+
+_PALAVRAS_CHAVE_POR_CATEGORIA: dict[str, tuple[str, ...]] = {
+    "Motor & Transmissão": (
+        "motor", "potencia", "torque", "cilindrada", "cilindro", "cambio",
+        "marchas", "turbo", "biturbo", "consumo", "autonomia", "flex",
+        "diesel", "hibrido", "fhev", "phev", "bev", "combustivel",
+        "transmissao", "paddle shift", "deslocamento", "rotacao maxima",
+        "compressao", "valvulas",
+    ),
+    "Rodas & Pneus": ("roda", "liga leve", "pneu", "estepe", "aro"),
+    "Conectividade": (
+        "aplicativo", "assistente digital", "localizacao do veiculo",
+        "ota", "wi-fi", "wifi", "geofencing", "hotspot", "conectividade",
+        "atualizacoes ota",
+    ),
+    "Multimídia & Som": (
+        "bluetooth", "camera", "gps", "navegador", "radio", "alto-falantes",
+        "tweeters", "som", "head up display", "hud", "android auto",
+        "car play", "carplay", "usb", "tela no painel", "multimidia",
+        "subwoofer", "reconhecimento de voz", "carregamento wireless",
+    ),
+    "Ar-condicionado": ("ar condicionado", "climatiza"),
+    "Segurança": (
+        "airbag", "freio", "abs", "pressao dos pneus", "tpms", "capotamento",
+        "controle de descida", "controle de tracao", "controle adaptativo de carga",
+        "controle de reboque",
+    ),
+    "Alta Tecnologia": (
+        "piloto automatico", "limitador de velocidade", "sensor de estacionamento",
+        "estacionamento automatico", "ponto-cego", "ponto cego", "blis",
+        "sistema de permanencia na faixa", "aeb", "colisao", "retrovisor",
+        "keyless", "partida remota", "detector de fadiga", "sinais de transito",
+        "modo de conducao", "drive mode", "ignicao remota", "sensor de chuva",
+    ),
+    "Vidros & Travas": ("vidro", "trava", "alarme", "porta-malas", "porta malas"),
+    "Acabamento Interno": (
+        "revestido em couro", "revestimento", "volante", "alcantara",
+        "soft touch", "manopla",
+    ),
+    "Teto Solar": ("teto solar", "teto de vidro", "sunroof"),
+    "Bancos": ("banco", "bancos", "assento", "recaro"),
+    "Iluminação": ("farol", "farois", "led", "xenon", "lanterna", "drl", "iluminacao"),
+    "Tração 4x4": (
+        "4x4", "tracao", "awd", "diferencial", "santo antonio",
+        "estribo", "terrain management", "suspensao off", "propulsao",
+    ),
+}
+
+# Palavras-chave curtas/genéricas que só podem valer como palavra ISOLADA
+# (ex.: "aro" não pode casar dentro de "farol"; "led" não pode casar dentro
+# de outra palavra) — todo o resto casa como frase completa via \b...\b,
+# que já cobre isso naturalmente; mantido aqui só por clareza/documentação.
+
+
+def _sem_acento(texto: str) -> str:
+    """Remove acentos pra casar palavras-chave sem depender de acentuação."""
+    nfkd = unicodedata.normalize("NFKD", texto)
+    return "".join(c for c in nfkd if not unicodedata.combining(c))
+
+
+def _contem_termo(alvo: str, termo: str) -> bool:
+    """Casa `termo` (palavra ou frase) em `alvo` ancorado só no INÍCIO da
+    palavra (\\b antes, sem \\b depois) — evita falso positivo tipo "aro"
+    dentro de "farol" (não há fronteira de palavra ali), mas ainda aceita
+    variações por sufixo comuns em português (plural: "pneu"→"pneus",
+    "banco"→"bancos"; conjugação: "trava"→"travamento")."""
+    padrao = r"\b" + re.escape(termo)
+    return re.search(padrao, alvo) is not None
+
+
+def categorizar_atributo(atributo: str) -> str:
+    """
+    Classifica um nome de atributo numa das categorias de `CATEGORIAS`, por
+    palavra/frase inteira (case/acento-insensitive). Sem correspondência
+    → "Outros" (mesmo papel de "Dados diversos" em fichas de comparação).
+    """
+    alvo = _sem_acento(atributo).lower()
+    for categoria in CATEGORIAS[:-1]:  # todas menos "Outros"
+        termos = _PALAVRAS_CHAVE_POR_CATEGORIA.get(categoria, ())
+        if any(_contem_termo(alvo, termo) for termo in termos):
+            return categoria
+    return "Outros"
 
 
 # ── Helpers internos ──────────────────────────────────────────────────────────
@@ -94,8 +203,9 @@ def normalizar(
 
     Retorna
     -------
-    Lista de {"atributo": str, "valor": str, "fonte": str} ordenada
-    alfabeticamente por 'atributo' (case-insensitive).
+    Lista de {"atributo": str, "valor": str, "fonte": str, "categoria": str}
+    ordenada alfabeticamente por 'atributo' (case-insensitive). 'categoria' é
+    atribuída por `categorizar_atributo()`, taxonomia fixa em `CATEGORIAS`.
 
     Comportamento para dados ausentes
     ----------------------------------
@@ -132,6 +242,7 @@ def normalizar(
                 "atributo": atributo,
                 "valor":    valor if valor else "não disponível",
                 "fonte":    fonte_limpa,
+                "categoria": categorizar_atributo(atributo),
             })
 
     # ── Filtro de atributos desejados ─────────────────────────────────────────

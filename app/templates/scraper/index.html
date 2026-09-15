@@ -1,0 +1,206 @@
+{% extends "_layout/dashboard_base.html" %}
+
+{% block titulo %}Scraper Mode{% endblock %}
+{% block mode_accent %}--accent-scraper{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='scraper/style.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page__header">
+  <div>
+    <h1 class="page__titulo">Scraper Mode</h1>
+    <p class="page__descricao">
+      Cadastre um site de carro, deixe a IA mapear os seletores (ficha técnica,
+      anúncios/preços, comentários), valide na tela de teste e registre — o
+      site vira uma fonte de dados própria, coletada por aqui.
+    </p>
+  </div>
+</div>
+
+<div data-aviso-scraper class="aviso aviso--erro" hidden></div>
+
+<div class="analytics-kpis">
+  <div class="analytics-kpi">
+    <span class="analytics-kpi__icone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <rect x="3.5" y="4" width="17" height="16" rx="2"/>
+        <path d="M7 9h10M7 13h10M7 17h6" stroke-linecap="round"/>
+      </svg>
+    </span>
+    <span>
+      <p class="analytics-kpi__valor" data-kpi-sites>—</p>
+      <p class="analytics-kpi__rotulo">Sites cadastrados</p>
+    </span>
+  </div>
+
+  <div class="analytics-kpi">
+    <span class="analytics-kpi__icone analytics-kpi__icone--ok">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M4 18l5-5 4 3 7-8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M15 8h5v5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </span>
+    <span>
+      <p class="analytics-kpi__valor" data-kpi-registrados>—</p>
+      <p class="analytics-kpi__rotulo">Sites registrados</p>
+    </span>
+  </div>
+
+  <div class="analytics-kpi">
+    <span class="analytics-kpi__icone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M4 17V7a1 1 0 011-1h8l6 6v5a1 1 0 01-1 1H5a1 1 0 01-1-1z" stroke-linejoin="round"/>
+        <path d="M13 6v5h6" stroke-linejoin="round"/>
+      </svg>
+    </span>
+    <span>
+      <p class="analytics-kpi__valor" data-kpi-ficha>—</p>
+      <p class="analytics-kpi__rotulo">Atributos de ficha técnica</p>
+    </span>
+  </div>
+
+  <div class="analytics-kpi">
+    <span class="analytics-kpi__icone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M4 10l8-5 8 5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M5 10v8h14v-8M9 18v-5M15 18v-5" stroke-linecap="round"/>
+      </svg>
+    </span>
+    <span>
+      <p class="analytics-kpi__valor" data-kpi-anuncios>—</p>
+      <p class="analytics-kpi__rotulo">Anúncios coletados</p>
+    </span>
+  </div>
+
+  <div class="analytics-kpi">
+    <span class="analytics-kpi__icone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M4 5h16v10H8l-4 4z" stroke-linejoin="round"/>
+      </svg>
+    </span>
+    <span>
+      <p class="analytics-kpi__valor" data-kpi-comentarios>—</p>
+      <p class="analytics-kpi__rotulo">Comentários coletados</p>
+    </span>
+  </div>
+</div>
+
+{# ── Sites cadastrados ─────────────────────────────────────────────────── #}
+<div class="painel">
+  <div class="painel__cabecalho">
+    <div>
+      <h2 class="painel__titulo">Sites cadastrados</h2>
+      <p class="painel__legenda" data-resumo-sites>Carregando…</p>
+    </div>
+    <div class="painel__acoes">
+      <button type="button" class="btn btn--linha btn--pequeno" data-recarregar-sites>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><path d="M20 12a8 8 0 10-2.5 5.8M20 8v5h-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Recarregar
+      </button>
+      <button type="button" class="btn btn--primario btn--pequeno" data-novo-site>Novo site</button>
+    </div>
+  </div>
+
+  <div data-lista-sites>
+    <div class="vazio"><strong>Carregando sites…</strong></div>
+  </div>
+</div>
+
+{# ── Modal: novo site ──────────────────────────────────────────────────── #}
+<div class="modal" data-modal-site hidden>
+  <div class="modal__caixa" role="dialog" aria-modal="true" aria-labelledby="modal-site-titulo">
+    <h2 class="painel__titulo" id="modal-site-titulo">Novo site</h2>
+    <p class="painel__legenda">
+      Informe a URL base e ao menos um objetivo, com uma página de exemplo pra
+      cada — é a partir dela que a IA vai mapear os seletores.
+    </p>
+
+    <form data-form-site>
+      <p class="rotulo-secao">Identificação</p>
+      <div class="campo">
+        <label for="site-nome">Nome</label>
+        <input type="text" id="site-nome" data-site-nome required placeholder="ex.: WebMotors — Ford">
+      </div>
+      <div class="campo">
+        <label for="site-url">URL base do site</label>
+        <input type="url" id="site-url" data-site-url required placeholder="https://www.exemplo.com.br">
+      </div>
+
+      <p class="rotulo-secao rotulo-secao--espacada">Objetivos</p>
+      <div class="scraper-objetivos" data-objetivos-form>
+        <label class="scraper-objetivo-check">
+          <input type="checkbox" data-objetivo-check="ficha_tecnica">
+          Ficha técnica
+        </label>
+        <div class="campo scraper-amostra" data-amostra-campo="ficha_tecnica" hidden>
+          <label>URL de exemplo (ficha técnica)</label>
+          <input type="url" data-amostra-url="ficha_tecnica" placeholder="https://.../carro/ficha-tecnica">
+        </div>
+
+        <label class="scraper-objetivo-check">
+          <input type="checkbox" data-objetivo-check="anuncios">
+          Anúncios / preços
+        </label>
+        <div class="campo scraper-amostra" data-amostra-campo="anuncios" hidden>
+          <label>URL de exemplo (listagem de anúncios)</label>
+          <input type="url" data-amostra-url="anuncios" placeholder="https://.../busca?marca=...">
+        </div>
+
+        <label class="scraper-objetivo-check" data-check-comentarios>
+          <input type="checkbox" data-objetivo-check="comentarios" disabled>
+          Comentários <span class="campo__ajuda">(exige "Anúncios")</span>
+        </label>
+        <div class="campo scraper-amostra" data-amostra-campo="comentarios" hidden>
+          <label>URL de exemplo (anúncio com comentários)</label>
+          <input type="url" data-amostra-url="comentarios" placeholder="https://.../anuncio/123">
+        </div>
+      </div>
+
+      <p class="rotulo-secao rotulo-secao--espacada">Modelo de IA (opcional)</p>
+      <div class="grade grade--2">
+        <div class="campo">
+          <label for="site-provider">Provider</label>
+          <select id="site-provider" data-site-provider>
+            <option value="">padrão do sistema</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="site-model">Modelo</label>
+          <select id="site-model" data-site-model disabled>
+            <option value="">padrão do provider</option>
+          </select>
+          <input type="text" data-site-model-custom placeholder="nome do modelo" hidden style="margin-top:6px">
+        </div>
+      </div>
+
+      <div class="modal__acoes">
+        <button type="button" class="btn btn--linha" data-fechar-modal-site>Cancelar</button>
+        <button type="submit" class="btn btn--primario" data-confirmar-site>Criar site</button>
+      </div>
+      <span class="aviso" data-aviso-modal-site></span>
+    </form>
+  </div>
+</div>
+
+{# ── Modal: configurar etapa ──────────────────────────────────────────── #}
+<div class="modal" data-modal-etapa hidden>
+  <div class="modal__caixa modal__caixa--larga" role="dialog" aria-modal="true" aria-labelledby="modal-etapa-titulo">
+    <h2 class="painel__titulo" id="modal-etapa-titulo" data-modal-etapa-titulo>Etapa</h2>
+    <p class="painel__legenda" data-modal-etapa-legenda></p>
+
+    <div data-modal-etapa-corpo></div>
+
+    <div class="modal__acoes">
+      <button type="button" class="btn btn--linha" data-fechar-modal-etapa>Fechar</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='scraper/script.js') }}"></script>
+{% endblock %}

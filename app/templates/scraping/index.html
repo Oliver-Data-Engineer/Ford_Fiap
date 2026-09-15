@@ -19,44 +19,51 @@
   </div>
 </div>
 
-{# ── Painel de pesquisa ──────────────────────────────────────────────────── #}
+{# ── Painel de seleção de veículo ────────────────────────────────────────── #}
 <div class="painel">
-  <h2 class="painel__titulo">Pesquisa</h2>
+  <h2 class="painel__titulo">Veículo</h2>
   <p class="painel__legenda">
-    Informe os atributos que deseja consultar, um por linha ou separados por
-    vírgula. Deixe em branco para retornar todas as especificações disponíveis.
+    Escolha a marca, o modelo e a versão do veículo que deseja pesquisar.
   </p>
 
-  <form class="form-specs" data-form-specs>
-
-    <div class="campo campo--full">
-      <label for="atributos">Atributos desejados <span class="campo__opcional">(opcional)</span></label>
-      <textarea
-        id="atributos"
-        name="atributos"
-        class="campo__textarea"
-        placeholder="Ex: motor, potência, torque, tração, câmbio"
-        maxlength="2000"
-        rows="3"
-        aria-describedby="atributos-ajuda"
-      ></textarea>
-      <p id="atributos-ajuda" class="campo__ajuda">
-        Exemplos: <em>motor, potência, torque, tração, câmbio, tanque, suspensão</em>
-      </p>
+  <div class="grade grade--3" data-form-veiculo>
+    <div class="campo">
+      <label for="marca">Marca</label>
+      <select id="marca" data-select-marca>
+        <option value="">Selecione a marca</option>
+      </select>
     </div>
 
-    {# Dados do veículo passados pelo Flask via query string — usados pelo JS #}
+    <div class="campo">
+      <label for="modelo">Modelo</label>
+      <select id="modelo" data-select-modelo disabled>
+        <option value="">Selecione a marca primeiro</option>
+      </select>
+    </div>
+
+    <div class="campo">
+      <label for="versao">Versão</label>
+      <select id="versao" data-select-versao disabled>
+        <option value="">Selecione o modelo primeiro</option>
+      </select>
+    </div>
+  </div>
+
+  <p class="mensagem" data-mensagem-veiculo aria-live="polite" hidden></p>
+
+  <form class="form-specs" data-form-specs>
+    {# Dados do veículo — preenchidos pelo Jinja (query string) e mantidos em
+       sincronia com os selects acima pelo JS #}
     <input type="hidden" id="veiculo-marca"  value="{{ marca }}">
     <input type="hidden" id="veiculo-modelo" value="{{ modelo }}">
     <input type="hidden" id="veiculo-versao" value="{{ versao }}">
 
     <div class="form-specs__rodape">
-      <button type="submit" class="btn btn--primario" data-botao-buscar>
+      <button type="submit" class="btn btn--primario" data-botao-buscar disabled>
         Buscar especificações
       </button>
       <span class="status-busca" data-status-busca aria-live="polite"></span>
     </div>
-
   </form>
 </div>
 
@@ -68,15 +75,20 @@
       <h2 class="painel__titulo">Resultado</h2>
       <p class="painel__legenda" data-contador-specs aria-live="polite"></p>
     </div>
-    <button
-      type="button"
-      class="btn btn--secundario"
-      data-botao-csv
-      hidden
-      aria-label="Exportar especificações em CSV"
-    >
-      Exportar CSV
-    </button>
+    <div class="painel__acoes">
+      <button type="button" class="btn btn--linha btn--pequeno" data-botao-expandir hidden>
+        Recolher tudo
+      </button>
+      <button
+        type="button"
+        class="btn btn--secundario"
+        data-botao-csv
+        hidden
+        aria-label="Exportar especificações em CSV"
+      >
+        Exportar CSV
+      </button>
+    </div>
   </div>
 
   {# Aviso de limite de linhas #}
@@ -84,7 +96,7 @@
     Exibindo apenas as primeiras 500 especificações encontradas.
   </div>
 
-  {# Área de conteúdo — spinner / tabela / estado vazio / erro #}
+  {# Área de conteúdo — spinner / seções por categoria / estado vazio / erro #}
   <div data-area-resultado>
 
     <div class="spinner-wrap" data-spinner hidden aria-label="Carregando…" role="status">
@@ -98,17 +110,8 @@
 
     <div class="erro-inline" data-estado-erro hidden role="alert"></div>
 
-    <div class="tabela-wrap" data-tabela-wrap hidden>
-      <table class="tabela tabela--specs" aria-label="Especificações técnicas">
-        <thead>
-          <tr>
-            <th scope="col">Atributo</th>
-            <th scope="col">Valor</th>
-            <th scope="col">Fonte</th>
-          </tr>
-        </thead>
-        <tbody data-tabela-corpo></tbody>
-      </table>
+    <div class="secoes-specs" data-secoes-wrap hidden>
+      <div data-secoes-lista></div>
     </div>
 
   </div>

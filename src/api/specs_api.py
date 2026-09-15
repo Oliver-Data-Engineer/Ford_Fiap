@@ -19,6 +19,10 @@ import logging
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from src.config import settings
+from src.pipelines.models import agora_iso
+from src.scraper import schemas as scraper_schemas
+from src.scraper import warehouse as scraper_warehouse
 from src.utils.CarrosWeb import CarrosWeb
 from src.utils.iCarros import CarrosWeb as ICarros  # mesma interface, URL base diferente
 from src.utils.normalizador import normalizar
@@ -296,10 +300,11 @@ async def executar_busca(body: ExecutarRequest):
             detail={"erro": f"Campos obrigatórios ausentes: {', '.join(ausentes)}."},
         )
 
-    async def _ficha_de_fonte(nome: str, fonte) -> list[dict]:
+    async def _ficha_de_fonte(nome: str, fonte) -> dict:
         """
         Localiza a versão solicitada na fonte e extrai sua ficha técnica.
-        Retorna [] se não encontrar ou em caso de erro.
+        Retorna {"url_ficha": str, "specs": list[dict]} — specs vazia se não
+        encontrar ou em caso de erro (url_ficha também vazia nesse caso).
         """
         try:
             # 1. Descobre a URL da versão solicitada
@@ -318,7 +323,7 @@ async def executar_busca(body: ExecutarRequest):
                     "[specs_api] executar – nenhuma versão encontrada em '%s' "
                     "para %s %s", nome, body.fabricante, body.modelo,
                 )
-                return []
+                return {"url_ficha": "", "specs": []}
 
             # 2. Encontra a versão mais próxima pelo nome (substring, case-insensitive)
             alvo = body.versao.strip().lower()
@@ -333,16 +338,17 @@ async def executar_busca(body: ExecutarRequest):
                     "[specs_api] executar – url_ficha vazia para versão '%s' em '%s'",
                     versao_encontrada.get("versao"), nome,
                 )
-                return []
+                return {"url_ficha": "", "specs": []}
 
             # 3. Extrai a ficha técnica
-            return await fonte.extrair_ficha_tecnica(url_ficha)
+            specs = await fonte.extrair_ficha_tecnica(url_ficha)
+            return {"url_ficha": url_ficha, "specs": specs}
 
         except Exception as exc:
             logger.error(
                 "[specs_api] executar – erro na fonte '%s': %s", nome, exc
             )
-            return []
+            return {"url_ficha": "", "specs": []}
 
     # Busca em paralelo em todas as fontes com timeout global
     tarefas = {
@@ -351,6 +357,7 @@ async def executar_busca(body: ExecutarRequest):
     }
 
     resultados_por_fonte: dict[str, list[dict]] = {}
+    url_ficha_por_fonte: dict[str, str] = {}
     for nome, coro in tarefas.items():
         resultado, erro = await coro
         if erro:
@@ -359,10 +366,58 @@ async def executar_busca(body: ExecutarRequest):
                 nome, erro,
             )
         else:
-            resultados_por_fonte[nome] = resultado or []
+            resultados_por_fonte[nome] = (resultado or {}).get("specs") or []
+            url_ficha_por_fonte[nome] = (resultado or {}).get("url_ficha") or ""
 
     # Normaliza — atributos_desejados=None ou [] → retorna tudo
     atributos = body.atributos if body.atributos else None
     especificacoes = normalizar(resultados_por_fonte, atributos_desejados=atributos)
 
+    _salvar_no_warehouse(body, especificacoes, url_ficha_por_fonte)
+
     return {"especificacoes": especificacoes}
+
+
+def _salvar_no_warehouse(
+    body: ExecutarRequest,
+    especificacoes: list[dict],
+    url_ficha_por_fonte: dict[str, str],
+) -> None:
+    """
+    Grava as especificações extraídas na mesma tabela BigQuery que o Scraper
+    Mode usa (`scraper_ficha_tecnica`) — uma busca manual vira histórico
+    igual a uma coleta automática. Melhor esforço: nunca deve derrubar a
+    resposta da busca, só registra aviso se BigQuery não estiver configurado
+    ou se a gravação falhar.
+    """
+    if not especificacoes:
+        return
+    if not settings.bigquery_configurado:
+        logger.info("[specs_api] BigQuery não configurado — busca não será persistida.")
+        return
+
+    agora = agora_iso()
+    linhas = [
+        {
+            "site_id": spec["fonte"],
+            "site_nome": spec["fonte"],
+            "marca": body.fabricante,
+            "modelo": body.modelo,
+            "versao": body.versao,
+            "ano": None,
+            "atributo": spec["atributo"],
+            "valor": spec["valor"],
+            "url_origem": (
+                url_ficha_por_fonte.get(spec["fonte"])
+                or getattr(FONTES.get(spec["fonte"]), "base_url", "")
+                or "desconhecida"
+            ),
+            "coletado_em": agora,
+        }
+        for spec in especificacoes
+    ]
+
+    try:
+        scraper_warehouse.upsert(scraper_schemas.FICHA_TECNICA, linhas)
+    except Exception as exc:
+        logger.warning("[specs_api] falha ao gravar ficha técnica no BigQuery: %s", exc)

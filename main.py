@@ -12,6 +12,8 @@ Endpoints disponíveis:
     /pipelines/*  pipelines, execuções e DAGs do Airflow
     /analytics/*  leitura do warehouse analítico (Dashboard) — BigQuery
     /gov/*        catálogo FIPE (marca/modelo/ano) e suas pipelines — BigQuery
+    /scraper/*    auto-discovery de sites de carro (ficha técnica/anúncios/
+                  comentários) e suas pipelines — BigQuery
 
 Documentação interativa:
     http://localhost:8000/docs
@@ -25,8 +27,10 @@ from src.api.analytics_api import router as analytics_router
 from src.api.gov_api import router as gov_router
 from src.api.pipelines_api import router as pipelines_router
 from src.api.prompts_api import router as prompts_router
+from src.api.scraper_api import router as scraper_router
 from src.api.specs_api import router as specs_router
 from src.api.youtube_api import router as youtube_router
+from src.scraper.exemplos import garantir_sites_exemplo
 
 # ── Configuração básica de logging ────────────────────────────────────────────
 logging.basicConfig(
@@ -61,6 +65,15 @@ app.include_router(prompts_router)
 app.include_router(pipelines_router)
 app.include_router(analytics_router)
 app.include_router(gov_router)
+app.include_router(scraper_router)
+
+
+@app.on_event("startup")
+def _seed_scraper_sites() -> None:
+    """Garante os dois sites de exemplo do Scraper Mode (iCarros e
+    CarroNaWeb), com o mapeamento completo já validado — modelo do fluxo pra
+    quem for cadastrar um site novo. Recria só o que estiver faltando."""
+    garantir_sites_exemplo()
 
 
 # ── Execução direta ───────────────────────────────────────────────────────────

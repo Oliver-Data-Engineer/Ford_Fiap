@@ -1,0 +1,515 @@
+/* ============================================================
+   SCRAPER MODE — auto-discovery de sites de carro. Reaproveita tokens/
+   classes de shared/base.css (.painel, .campo, .selo, .tabela, .vazio,
+   .aviso, .btn, .modal) — aqui só o que é específico desta página. KPIs,
+   card de site, dobra e código da DAG replicados no mesmo padrão de
+   gov/style.css (esta página não carrega os estáticos de outras abas).
+   ============================================================ */
+
+.painel__cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.painel__cabecalho .painel__legenda { margin-bottom: 0; }
+
+.painel__acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.btn--pequeno { padding: 7px 16px; font-size: 12.5px; }
+
+.rotulo-secao {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+
+.rotulo-secao--espacada { margin-top: 22px; }
+
+.grade { display: grid; gap: 14px; }
+.grade--2 { grid-template-columns: repeat(2, 1fr); }
+
+/* ---------- KPIs (mesmo padrão do Gov Mode/Dashboard) ---------- */
+
+.analytics-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.analytics-kpi {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.analytics-kpi__icone {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mode-accent, var(--accent-scraper));
+  background: color-mix(in srgb, var(--mode-accent, var(--accent-scraper)) 14%, transparent);
+}
+
+.analytics-kpi__icone svg { width: 22px; height: 22px; }
+
+.analytics-kpi__icone--ok {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+}
+
+.analytics-kpi__valor {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 2px;
+  line-height: 1.1;
+}
+
+.analytics-kpi__rotulo { font-size: 12.5px; color: var(--text-muted); margin: 0; }
+
+/* ---------- modal: novo site ---------- */
+
+.scraper-objetivos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.scraper-objetivo-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.scraper-objetivo-check input[type="checkbox"] { width: 16px; height: 16px; }
+
+.scraper-amostra { margin: 0 0 8px 24px; }
+
+/* ---------- card de site (mesmo padrão do pipeline-card do Gov Mode) ---------- */
+
+.lista-sites { display: flex; flex-direction: column; gap: 10px; }
+
+.site-card {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.site-card__topo {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 18px;
+  align-items: center;
+  padding: 15px 16px;
+}
+
+.site-card__nome {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.site-card__descricao { font-size: 12.5px; color: var(--text-muted); margin: 0; line-height: 1.5; }
+
+.site-card__meta { display: flex; gap: 6px 16px; flex-wrap: wrap; margin-top: 8px; }
+
+.versao {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 100px;
+  padding: 1px 7px;
+}
+
+.dado-rotulado { font-size: 11.5px; color: var(--text-faint); }
+
+.dado-rotulado strong {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.site-card__acoes { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+.dobra { border-top: 1px solid var(--hairline); }
+
+.dobra__resumo {
+  padding: 11px 16px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dobra__resumo::-webkit-details-marker { display: none; }
+
+.dobra__resumo::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid var(--text-faint);
+  border-bottom: 1.5px solid var(--text-faint);
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+
+.dobra[open] > .dobra__resumo::before { transform: rotate(45deg); }
+.dobra[open] > .dobra__resumo { color: var(--text-primary); }
+
+.dobra__corpo { padding: 0 16px 16px; }
+
+/* ---------- painel de mapeamento/teste por objetivo ---------- */
+
+.scraper-objetivo-painel {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+  background: var(--bg-panel-raised);
+}
+
+.scraper-objetivo-painel__titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+
+.scraper-campos-seletor {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px 12px;
+  margin-bottom: 10px;
+}
+
+.scraper-campo-seletor { display: flex; flex-direction: column; gap: 3px; }
+
+.scraper-campo-seletor label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+
+.scraper-campo-seletor input {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+/* ---------- fluxo de etapas (visual dependency-free — caixas + conector) ---------- */
+/* Sem lib de diagrama externa: o núcleo do Rete.js (rete@1.4.4) até tem CDN
+   funcional, mas o pacote de renderização vanilla (sem framework) da v1 não
+   tem uma versão testável/confirmada aqui — flexbox + conector dá a mesma
+   leitura visual (caixas ligadas em sequência, clicáveis) sem essa incerteza. */
+
+.fluxo-etapas {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.fluxo-etapa {
+  flex: 0 0 auto;
+  width: 168px;
+  border: 1.5px solid var(--hairline-strong);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+}
+
+.fluxo-etapa:hover { border-color: var(--mode-accent, var(--accent-scraper)); box-shadow: var(--shadow-sm); }
+
+.fluxo-etapa--final { border-style: solid; background: var(--bg-panel-raised); }
+
+.fluxo-etapa__numero {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--mode-accent, var(--accent-scraper));
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.fluxo-etapa__rotulo { font-size: 12px; font-weight: 600; }
+
+.fluxo-etapa__selo { display: block; margin-top: 6px; }
+
+.fluxo-etapa__acoes {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.fluxo-etapa:hover .fluxo-etapa__acoes { opacity: 1; }
+
+.fluxo-etapa__acao {
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 4px;
+  background: var(--bg-panel-raised);
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.fluxo-etapa__acao:hover { background: var(--hairline-strong); color: var(--text-primary); }
+
+.fluxo-seta {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--text-faint);
+  padding: 0 2px;
+}
+
+.fluxo-seta__campo {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.fluxo-add {
+  flex: 0 0 auto;
+  width: 90px;
+  border: 1.5px dashed var(--hairline-strong);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.fluxo-add:hover { border-color: var(--mode-accent, var(--accent-scraper)); color: var(--mode-accent, var(--accent-scraper)); }
+
+/* ---------- modal de etapa (mais largo) ---------- */
+
+.modal__caixa--larga { width: min(760px, 100%); }
+
+.scraper-campo-livre {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.scraper-campo-livre input { font-family: var(--font-mono); font-size: 12px; }
+
+.scraper-filtro-linha {
+  display: grid;
+  grid-template-columns: 1fr 1fr 140px;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.scraper-filtro-linha:last-child { border-bottom: none; }
+
+.scraper-filtro-linha .mono { font-family: var(--font-mono); color: var(--text-muted); }
+
+/* ---------- dados coletados (por site registrado) ---------- */
+
+.scraper-dados-secao { margin-bottom: 16px; }
+
+.scraper-dados-secao__titulo {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+
+/* destaque da coluna-chave (preço/valor/nota, conforme o objetivo) nas
+   tabelas de prévia e de dados coletados */
+.tabela__coluna-chave {
+  font-weight: 700;
+  color: var(--mode-accent, var(--accent-scraper));
+}
+
+.scraper-resumo-ia {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--hairline-strong);
+  border-left: 3px solid var(--mode-accent, var(--accent-scraper));
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.scraper-resumo-ia__pergunta {
+  display: block;
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.scraper-preview-wrap { margin-top: 10px; }
+
+.scraper-preview-vazio { font-size: 12px; color: var(--text-faint); padding: 8px 0; }
+
+/* ---------- código da DAG ---------- */
+
+.dag-barra { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.dag-caminho { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); }
+.dag-acoes { display: flex; gap: 8px; }
+
+.codigo {
+  background: var(--bg-base);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin: 0;
+  max-height: 460px;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--text-muted);
+  white-space: pre;
+  tab-size: 4;
+}
+
+.codigo .tk-kw { color: var(--mode-accent, var(--accent-scraper)); }
+.codigo .tk-str { color: var(--ok); }
+.codigo .tk-com { color: var(--text-faint); font-style: italic; }
+.codigo .tk-num { color: var(--warn); }
+
+/* ---------- histórico de execuções ---------- */
+
+.tabela-runs { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+
+.tabela-runs th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding: 7px 9px;
+  border-bottom: 1px solid var(--hairline-strong);
+}
+
+.tabela-runs td { padding: 9px; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+.tabela-runs tr:last-child td { border-bottom: none; }
+.tabela-runs .mono { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); }
+
+.etapas-inline { display: flex; gap: 3px; flex-wrap: wrap; }
+
+.etapa-ponto { width: 7px; height: 7px; border-radius: 50%; background: var(--hairline-strong); margin-top: 5px; }
+.etapa-ponto--success { background: var(--ok); }
+.etapa-ponto--failed { background: var(--danger); }
+.etapa-ponto--running { background: var(--warn); }
+.etapa-ponto--partial { background: var(--warn); }
+.etapa-ponto--skipped { background: var(--hairline-strong); opacity: 0.5; }
+
+/* ---------- avisos / vazios ---------- */
+
+.aviso { font-size: 12.5px; color: var(--text-muted); }
+.aviso--erro { color: var(--danger); }
+.aviso--ok { color: var(--ok); }
+.aviso--linha { display: block; margin-top: 10px; }
+.vazio--compacto { padding: 22px 14px; font-size: 13px; }
+
+/* ---------- modal ---------- */
+
+.modal { position: fixed; inset: 0; background: rgba(22, 35, 58, 0.45); display: grid; place-items: center; padding: 20px; z-index: 50; }
+.modal[hidden] { display: none; }
+
+.modal__caixa {
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  padding: 26px;
+  width: min(600px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: var(--shadow-md);
+}
+
+.modal__caixa .campo, .modal__caixa .grade { margin-bottom: 14px; }
+.modal__acoes { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+/* ---------- responsivo ---------- */
+
+@media (max-width: 900px) {
+  .grade--2 { grid-template-columns: 1fr; }
+  .analytics-kpis { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 700px) {
+  .page__header { flex-direction: column; align-items: stretch; }
+  .painel__cabecalho { flex-direction: column; align-items: stretch; }
+  .site-card__topo { grid-template-columns: 1fr; }
+  .site-card__acoes { justify-content: flex-start; }
+  .scraper-campos-seletor { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .analytics-kpis { grid-template-columns: 1fr; }
+}

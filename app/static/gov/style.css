@@ -47,6 +47,101 @@
 
 .grade--2 { grid-template-columns: repeat(2, 1fr); }
 
+/* ---------- busca de preço (mold: fipe.api.br #01/busca_de_preco.ts) ---------- */
+
+.busca-preco__tag {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--mode-accent, var(--accent-gov));
+  margin-right: 6px;
+}
+
+.busca-preco__resultado {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--bg-panel-raised);
+  padding: 18px 20px;
+}
+
+.busca-preco__rotulo {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  margin-bottom: 6px;
+}
+
+.busca-preco__preco {
+  font-family: var(--font-mono);
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--mode-accent, var(--accent-gov));
+  line-height: 1.1;
+}
+
+.busca-preco__descricao {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.busca-preco__ano {
+  color: var(--text-faint);
+}
+
+.busca-preco__meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+}
+
+/* ---------- combobox filtrável (marca/modelo/ano da busca de preço) ---------- */
+
+.combobox { position: relative; }
+
+.combobox__input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.combobox__lista {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: 4px;
+}
+
+.combobox__opcao {
+  padding: 7px 10px;
+  border-radius: calc(var(--radius) - 4px);
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.combobox__opcao--ativa,
+.combobox__opcao:hover {
+  background: var(--bg-panel-raised);
+}
+
+.combobox__vazio {
+  padding: 10px;
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
+
 /* ---------- KPIs (mesmo padrão do Dashboard) ---------- */
 
 .analytics-kpis {
@@ -361,6 +456,7 @@
   .painel__cabecalho { flex-direction: column; align-items: stretch; }
   .pipeline-card__topo { grid-template-columns: 1fr; }
   .pipeline-card__acoes { justify-content: flex-start; }
+  .busca-preco__meta { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {

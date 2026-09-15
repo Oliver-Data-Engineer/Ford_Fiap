@@ -89,6 +89,19 @@
       <span class="sidebar__item-texto">Gov Mode</span>
     </a>
 
+    <a href="{{ url_for('scraper', marca=marca, modelo=modelo, versao=versao) }}"
+       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'scraper' }}"
+       style="--item-accent: var(--accent-scraper)"
+       data-rotulo="Scraper Mode">
+      <span class="sidebar__item-icone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <rect x="3.5" y="4" width="17" height="16" rx="2"/>
+          <path d="M7 9h10M7 13h10M7 17h6" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="sidebar__item-texto">Scraper Mode</span>
+    </a>
+
     <p class="sidebar__grupo-rotulo">Automação</p>
 
     <a href="{{ url_for('pipeline', marca=marca, modelo=modelo, versao=versao) }}"

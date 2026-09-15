@@ -1,47 +1,42 @@
+/* ── Seleção de veículo ──────────────────────────────────────────────────── */
+
+.grade { display: grid; gap: 14px; }
+.grade--3 { grid-template-columns: repeat(3, 1fr); }
+
+.campo select {
+  width: 100%;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-faint) 50%),
+    linear-gradient(135deg, var(--text-faint) 50%, transparent 50%);
+  background-position: calc(100% - 18px) center, calc(100% - 13px) center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.campo select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mensagem {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
+@media (max-width: 700px) {
+  .grade--3 { grid-template-columns: 1fr; }
+}
+
 /* ── Formulário de pesquisa ──────────────────────────────────────────────── */
 
 .form-specs {
   display: grid;
   gap: 20px;
-}
-
-.campo--full {
-  grid-column: 1 / -1;
-}
-
-.campo__textarea {
-  width: 100%;
-  resize: vertical;
-  min-height: 72px;
-  padding: 10px 12px;
-  border: 1px solid var(--hairline-strong);
-  border-radius: var(--radius);
-  background: var(--bg-panel-raised);
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.5;
-  box-sizing: border-box;
-  transition: border-color 0.15s;
-}
-
-.campo__textarea:focus {
-  outline: none;
-  border-color: var(--mode-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mode-accent) 15%, transparent);
-}
-
-.campo__ajuda {
-  margin: 6px 0 0;
-  font-size: 12px;
-  color: var(--text-muted);
-  line-height: 1.5;
-}
-
-.campo__opcional {
-  font-size: 12px;
-  color: var(--text-muted);
-  font-weight: 400;
+  margin-top: 20px;
 }
 
 .form-specs__rodape {
@@ -103,6 +98,14 @@
   flex-wrap: wrap;
 }
 
+.painel__acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
 /* ── Aviso de limite de linhas ───────────────────────────────────────────── */
 
 .aviso {
@@ -129,67 +132,116 @@
   font-size: 14px;
 }
 
-/* ── Tabela de especificações ────────────────────────────────────────────── */
+.btn--pequeno { padding: 7px 16px; font-size: 12.5px; }
 
-.tabela-wrap {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+/* ── Seções retráteis por categoria (estilo "ficha completa") ────────────── */
+
+.secoes-specs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.tabela--specs {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-  line-height: 1.5;
+.dobra { border-top: 1px solid var(--hairline); }
+
+.dobra__resumo {
+  padding: 11px 16px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.tabela--specs thead tr {
-  border-bottom: 2px solid var(--hairline-strong);
+.dobra__resumo::-webkit-details-marker { display: none; }
+
+.dobra__resumo::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid var(--text-faint);
+  border-bottom: 1.5px solid var(--text-faint);
+  transform: rotate(45deg);
+  transition: transform 0.15s;
+  margin-left: auto;
+  order: 3;
 }
 
-.tabela--specs th {
-  text-align: left;
-  padding: 10px 14px;
-  font-size: 12px;
+.dobra[open] > .dobra__resumo::before { transform: rotate(-135deg); }
+.dobra[open] > .dobra__resumo { color: var(--text-primary); }
+
+.dobra__corpo { padding: 0 16px 16px; }
+
+/* Cartão branco arredondado por categoria — visual próprio, não a divisória
+   simples que .dobra usa em Scraper/Gov/Pipelines */
+.especificacao-secao {
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  overflow: hidden;
+}
+
+.especificacao-secao .dobra__resumo {
+  font-size: 13.5px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Cabeçalho de colunas + linhas rótulo/valor/fonte dentro de cada categoria */
+
+.spec-linha {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.2fr) minmax(120px, 1.4fr) 100px;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--hairline);
+  align-items: baseline;
+}
+
+.spec-linha:last-child { border-bottom: none; }
+
+.spec-linha--cabecalho {
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.tabela--specs tbody tr {
+  color: var(--text-faint);
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--hairline-strong);
-  transition: background 0.1s;
 }
 
-.tabela--specs tbody tr:last-child {
-  border-bottom: none;
-}
-
-.tabela--specs tbody tr:hover {
-  background: var(--bg-panel-raised);
-}
-
-.tabela--specs td {
-  padding: 9px 14px;
-  vertical-align: top;
+.spec-linha__atributo {
+  font-weight: 500;
+  color: var(--text-primary);
   word-break: break-word;
 }
 
-/* Coluna Atributo — negrito leve */
-.tabela--specs td:first-child {
-  font-weight: 500;
+.spec-linha__valor {
   color: var(--text-primary);
-  min-width: 160px;
+  font-weight: 600;
+  word-break: break-word;
 }
 
-/* Coluna Fonte — monoespaçado e muted */
-.tabela--specs td:last-child {
+.spec-linha__fonte {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-muted);
   white-space: nowrap;
+  justify-self: start;
+}
+
+@media (max-width: 600px) {
+  .spec-linha {
+    grid-template-columns: 1fr;
+    gap: 2px;
+    padding: 10px 0;
+  }
+  .spec-linha--cabecalho { display: none; }
+  .spec-linha__fonte { justify-self: start; }
 }
 
 /* ── Célula "não disponível" ─────────────────────────────────────────────── */
@@ -216,11 +268,6 @@
   .form-specs__rodape {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .tabela--specs th,
-  .tabela--specs td {
-    padding: 8px 10px;
   }
 
   .painel__cabecalho {

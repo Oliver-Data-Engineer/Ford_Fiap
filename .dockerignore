@@ -1,0 +1,29 @@
+# Ambiente/artefatos locais — não fazem sentido dentro da imagem
+venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+.git/
+.gitignore
+.claude/
+.kiro/
+
+# Credenciais e dados persistidos — entram via volume/env_file no compose,
+# nunca ficam gravados numa camada da imagem
+.env
+config/
+data/
+*.db
+
+# Arquivos grandes/exploratórios que não são código de aplicação
+*.ipynb
+*.xlsx
+versus/
+docs/
+tests/
+airflow/dags/*.py
+
+# Documentação solta na raiz
+*.md
+teste.txt
+scraper.py

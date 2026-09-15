@@ -13,8 +13,9 @@
   <div>
     <h1 class="page__titulo">Gov Mode</h1>
     <p class="page__descricao">
-      Catálogo oficial FIPE — marca, modelo, ano e código FIPE — extraído das APIs
-      públicas (parallelum/BrasilAPI) e consolidado no BigQuery.
+      Catálogo oficial FIPE — marca, modelo, ano, código FIPE e preço — das APIs
+      públicas (parallelum/BrasilAPI), combinando o que já foi consolidado no
+      BigQuery com a busca ao vivo.
       {% if marca %}Filtro pré-selecionado para <strong>{{ marca }}</strong>.{% endif %}
     </p>
   </div>
@@ -76,43 +77,41 @@
   </div>
 </div>
 
-{# ── Catálogo ──────────────────────────────────────────────────────────── #}
-<div class="painel">
+{# ── Catálogo & busca de preço (unificados) ───────────────────────────── #}
+<div class="painel busca-preco">
   <div class="painel__cabecalho">
     <div>
-      <h2 class="painel__titulo">Catálogo FIPE</h2>
-      <p class="painel__legenda" data-resumo-catalogo>Selecione marca e modelo para ver os anos disponíveis.</p>
-    </div>
-    <div class="painel__acoes">
-      <label class="campo campo--inline">
-        <span>Veículo</span>
-        <select data-tipo-veiculo>
-          <option value="carros">Carros</option>
-          <option value="motos">Motos</option>
-          <option value="caminhoes">Caminhões</option>
-        </select>
-      </label>
+      <h2 class="painel__titulo">
+        <span class="busca-preco__tag">#01</span> Catálogo &amp; preço FIPE
+      </h2>
+      <p class="painel__legenda">Marca e modelo — tabela FIPE de carros.</p>
     </div>
   </div>
 
   <div class="grade grade--2">
-    <div class="campo">
-      <label for="cat-marca">Marca</label>
-      <select id="cat-marca" data-cat-marca>
-        <option value="">Selecione…</option>
-      </select>
+    <div class="campo combobox" data-combobox-marca>
+      <label for="busca-marca">Marca</label>
+      <input type="text" id="busca-marca" class="combobox__input" autocomplete="off"
+             placeholder="Carregando…" disabled>
+      <input type="hidden" data-combobox-valor>
+      <div class="combobox__lista" data-combobox-lista hidden></div>
     </div>
-    <div class="campo">
-      <label for="cat-modelo">Modelo</label>
-      <select id="cat-modelo" data-cat-modelo disabled>
-        <option value="">Selecione a marca primeiro</option>
-      </select>
+    <div class="campo combobox" data-combobox-modelo>
+      <label for="busca-modelo">Modelo</label>
+      <input type="text" id="busca-modelo" class="combobox__input" autocomplete="off"
+             placeholder="Selecione a marca primeiro" disabled>
+      <input type="hidden" data-combobox-valor>
+      <div class="combobox__lista" data-combobox-lista hidden></div>
     </div>
   </div>
 
+  <span class="aviso" data-busca-aviso style="display:block;margin-top:10px"></span>
+
+  <div data-busca-resultado style="margin-top:16px"></div>
+
   <div class="tabela-wrap" style="margin-top:16px">
-    <div data-tabela-fipe>
-      <div class="vazio vazio--compacto">Escolha marca e modelo para listar os anos e códigos FIPE.</div>
+    <div data-busca-tabela>
+      <div class="vazio vazio--compacto">Escolha marca e modelo para ver o histórico de anos.</div>
     </div>
   </div>
 </div>
