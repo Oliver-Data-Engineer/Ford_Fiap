@@ -33,7 +33,7 @@ MODELOS_CURADOS: dict[str, list[str]] = {
         "claude-haiku-4-5-20251001",
     ],
     "gemini": [
-        "gemini-2.0-flash",
+        "gemini-3.5-flash-lite",
         "gemini-2.5-flash",
         "gemini-2.5-pro",
     ],

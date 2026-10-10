@@ -119,14 +119,14 @@ async def principal():
     checar("JSON válido" in req["body"]["system"], "exigência de JSON foi para a instrução")
 
     print("\n=== Gemini ===")
-    agente = Agente(provider="gemini", model="gemini-2.0-flash",
+    agente = Agente(provider="gemini", model="gemini-3.5-flash-lite",
                     api_key="chave-gemini", base_url=f"{BASE}/gemini")
     r = await agente.run("texto", prompt="Analise")
 
     req = recebido["gemini"]
     checar(r.success and r.output == {"ok": True}, "resposta lida de candidates[0]")
     checar(r.usage["total_tokens"] == 15, "usageMetadata mapeado")
-    checar("models/gemini-2.0-flash:generateContent" in req["path"],
+    checar("models/gemini-3.5-flash-lite:generateContent" in req["path"],
            f"endpoint correto ({req['path']})")
     checar("key=chave-gemini" in req["path"], "credencial na query string")
     checar(req["body"]["generationConfig"]["responseMimeType"] == "application/json",

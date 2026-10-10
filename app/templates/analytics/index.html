@@ -4,6 +4,7 @@
 {% block mode_accent %}--accent-analytics{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 <link rel="stylesheet" href="{{ url_for('static', filename='analytics/style.css') }}">
 {% endblock %}
 
@@ -30,24 +31,39 @@
 <div class="painel">
   <div class="painel__cabecalho">
     <div>
-      <h2 class="painel__titulo">Filtros</h2>
-      <p class="painel__legenda">Combine canal e sentimento para recortar o painel inteiro.</p>
+      <h2 class="painel__titulo">Panorama geral</h2>
+      <p class="painel__legenda">Tudo que o app já coletou, nos 3 domínios de dado (BigQuery) — não é afetado pelo filtro de canal/sentimento abaixo, que é específico da seção de comentários do YouTube.</p>
     </div>
-    <div class="painel__acoes">
-      <label class="campo campo--inline">
-        <span>Canal</span>
-        <select data-filtro-canal>
-          <option value="">Todos</option>
-        </select>
-      </label>
-      <label class="campo campo--inline">
-        <span>Sentimento</span>
-        <select data-filtro-sentimento>
-          <option value="">Todos</option>
-        </select>
-      </label>
-      <button type="button" class="btn btn--linha btn--pequeno" data-limpar-filtros>Limpar</button>
+  </div>
+  <div class="analytics-kpis" data-panorama-kpis>
+    <div class="vazio vazio--compacto">Carregando…</div>
+  </div>
+</div>
+
+<div class="painel">
+  <div class="painel__cabecalho">
+    <div>
+      <h2 class="painel__titulo"><span class="material-icons painel__titulo-icone" aria-hidden="true">tune</span>Filtros</h2>
+      <p class="painel__legenda">Combine canal e sentimento para recortar as seções de comentários, sentimento e satisfação abaixo.</p>
     </div>
+  </div>
+  <div class="filtro-barra">
+    <label class="filtro-item">
+      <span class="material-icons filtro-item__icone" aria-hidden="true">subscriptions</span>
+      <select data-filtro-canal>
+        <option value="">Todos os canais</option>
+      </select>
+    </label>
+    <label class="filtro-item">
+      <span class="material-icons filtro-item__icone" aria-hidden="true">mood</span>
+      <select data-filtro-sentimento>
+        <option value="">Todos os sentimentos</option>
+      </select>
+    </label>
+    <button type="button" class="btn btn--linha btn--pequeno" data-limpar-filtros>
+      <span class="material-icons filtro-limpar__icone" aria-hidden="true">clear</span>
+      Limpar
+    </button>
   </div>
 </div>
 
@@ -120,6 +136,114 @@
       <span class="campo__ajuda">Do que as pessoas mais falam nos comentários</span>
     </div>
     <div class="analytics-grafico-wrap"><canvas data-grafico-objeto></canvas></div>
+  </div>
+</div>
+
+<div class="painel">
+  <div class="comparativo-cabecalho">
+    <div>
+      <h2 class="painel__titulo"><span class="material-icons painel__titulo-icone" aria-hidden="true">leaderboard</span>Comparação de marcas</h2>
+      <p class="painel__legenda">
+        Ford vs. a marca concorrente selecionada, a partir do mesmo sinal de sentimento dos comentários.
+      </p>
+    </div>
+    <label class="filtro-item">
+      <span class="material-icons filtro-item__icone" aria-hidden="true">directions_car</span>
+      <select data-comparativo-marca>
+        <option value="Chevrolet">Chevrolet</option>
+        <option value="Volkswagen">Volkswagen</option>
+        <option value="Toyota">Toyota</option>
+        <option value="Hyundai">Hyundai</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="comparativo-tiles">
+    <div class="comparativo-tile comparativo-tile--ford">
+      <p class="comparativo-tile__titulo">
+        <span class="comparativo-tile__cor"></span> Ford
+        <span class="selo--lidera" data-comparativo-selo-ford hidden>
+          <span class="material-icons" aria-hidden="true">military_tech</span> Líder
+        </span>
+      </p>
+      <div class="comparativo-tile__grid">
+        <div><p class="comparativo-tile__metrica">NPS</p><p class="comparativo-tile__valor" data-comparativo-ford-nps>—</p></div>
+        <div><p class="comparativo-tile__metrica">% positivo</p><p class="comparativo-tile__valor" data-comparativo-ford-positivo>—</p></div>
+        <div><p class="comparativo-tile__metrica">Engajamento médio</p><p class="comparativo-tile__valor" data-comparativo-ford-engajamento>—</p></div>
+        <div><p class="comparativo-tile__metrica">Menções</p><p class="comparativo-tile__valor" data-comparativo-ford-mencoes>—</p></div>
+      </div>
+    </div>
+    <div class="comparativo-tile comparativo-tile--concorrente">
+      <p class="comparativo-tile__titulo"><span class="comparativo-tile__cor"></span> <span data-comparativo-concorrente-nome>—</span></p>
+      <div class="comparativo-tile__grid">
+        <div><p class="comparativo-tile__metrica">NPS</p><p class="comparativo-tile__valor" data-comparativo-concorrente-nps>—</p></div>
+        <div><p class="comparativo-tile__metrica">% positivo</p><p class="comparativo-tile__valor" data-comparativo-concorrente-positivo>—</p></div>
+        <div><p class="comparativo-tile__metrica">Engajamento médio</p><p class="comparativo-tile__valor" data-comparativo-concorrente-engajamento>—</p></div>
+        <div><p class="comparativo-tile__metrica">Menções</p><p class="comparativo-tile__valor" data-comparativo-concorrente-mencoes>—</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="analytics-grafico-wrap"><canvas data-grafico-comparativo></canvas></div>
+</div>
+
+<div class="painel">
+  <div class="painel__cabecalho">
+    <div>
+      <h2 class="painel__titulo">Satisfação — NPS &amp; Likert</h2>
+      <p class="painel__legenda">
+        Índices aproximados a partir do sentimento já classificado pela IA nos comentários — não há
+        pesquisa de satisfação real coletada. Mapeamento: positivo = promotor / nota 5,
+        negativo = detrator / nota 1, neutro e misto = passivo / nota 3.
+      </p>
+    </div>
+  </div>
+
+  <div class="stat-tiles">
+    <div class="stat-tile">
+      <p class="stat-tile__rotulo">NPS (comentários filtrados)</p>
+      <p class="stat-tile__valor" data-stat-nps-valor>—</p>
+      <p class="stat-tile__legenda" data-stat-nps-legenda></p>
+    </div>
+    <div class="stat-tile">
+      <p class="stat-tile__rotulo">Likert médio (1–5)</p>
+      <p class="stat-tile__valor" data-stat-likert-valor>—</p>
+      <div class="likert-dist" data-likert-dist></div>
+    </div>
+  </div>
+
+  <div class="analytics-graficos">
+    <div class="painel analytics-card-grafico">
+      <div class="analytics-card-grafico__cabecalho">
+        <p class="rotulo-secao">NPS por tópico</p>
+        <span class="campo__ajuda">Verde: promotores dominam · cinza: equilibrado · vermelho: detratores dominam</span>
+      </div>
+      <div class="analytics-grafico-wrap"><canvas data-grafico-nps-objeto></canvas></div>
+    </div>
+    <div class="painel analytics-card-grafico">
+      <div class="analytics-card-grafico__cabecalho">
+        <p class="rotulo-secao">Likert médio por canal</p>
+        <span class="campo__ajuda">Média de 1 (negativo) a 5 (positivo), por canal</span>
+      </div>
+      <div class="analytics-grafico-wrap"><canvas data-grafico-likert-canal></canvas></div>
+    </div>
+  </div>
+
+  <div class="analytics-graficos">
+    <div class="painel analytics-card-grafico">
+      <div class="analytics-card-grafico__cabecalho">
+        <p class="rotulo-secao">Tendência de sentimento</p>
+        <span class="campo__ajuda">NPS por dia de coleta</span>
+      </div>
+      <div class="analytics-grafico-wrap"><canvas data-grafico-tendencia></canvas></div>
+    </div>
+    <div class="painel analytics-card-grafico">
+      <div class="analytics-card-grafico__cabecalho">
+        <p class="rotulo-secao">Engajamento por sentimento</p>
+        <span class="campo__ajuda">Média de likes do comentário, por sentimento</span>
+      </div>
+      <div class="analytics-grafico-wrap"><canvas data-grafico-engajamento></canvas></div>
+    </div>
   </div>
 </div>
 

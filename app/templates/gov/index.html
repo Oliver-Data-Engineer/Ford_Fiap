@@ -13,207 +13,42 @@
   <div>
     <h1 class="page__titulo">Gov Mode</h1>
     <p class="page__descricao">
-      Catálogo oficial FIPE — marca, modelo, ano, código FIPE e preço — das APIs
-      públicas (parallelum/BrasilAPI), combinando o que já foi consolidado no
-      BigQuery com a busca ao vivo.
-      {% if marca %}Filtro pré-selecionado para <strong>{{ marca }}</strong>.{% endif %}
+      Consulta as bases de dados oficiais do governo para o {{ marca }} {{ modelo }} {{ versao }}.
     </p>
   </div>
 </div>
 
-<div data-aviso-gov class="aviso aviso--erro" hidden></div>
-
-<div class="analytics-kpis">
-  <div class="analytics-kpi">
-    <span class="analytics-kpi__icone">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M4 10l8-5 8 5" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M5 10v8h14v-8M9 18v-5M15 18v-5" stroke-linecap="round"/>
-      </svg>
-    </span>
-    <span>
-      <p class="analytics-kpi__valor" data-kpi-marcas>—</p>
-      <p class="analytics-kpi__rotulo">Marcas catalogadas</p>
-    </span>
-  </div>
-
-  <div class="analytics-kpi">
-    <span class="analytics-kpi__icone">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <rect x="3.5" y="6" width="17" height="12" rx="2.2"/>
-        <path d="M7 10h4M7 14h7" stroke-linecap="round"/>
-      </svg>
-    </span>
-    <span>
-      <p class="analytics-kpi__valor" data-kpi-modelos>—</p>
-      <p class="analytics-kpi__rotulo">Modelos catalogados</p>
-    </span>
-  </div>
-
-  <div class="analytics-kpi">
-    <span class="analytics-kpi__icone">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M4 17V7a1 1 0 011-1h8l6 6v5a1 1 0 01-1 1H5a1 1 0 01-1-1z" stroke-linejoin="round"/>
-        <path d="M13 6v5h6" stroke-linejoin="round"/>
-      </svg>
-    </span>
-    <span>
-      <p class="analytics-kpi__valor" data-kpi-fipe>—</p>
-      <p class="analytics-kpi__rotulo">Registros com código FIPE</p>
-    </span>
-  </div>
-
-  <div class="analytics-kpi">
-    <span class="analytics-kpi__icone analytics-kpi__icone--ok">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M4 18l5-5 4 3 7-8" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M15 8h5v5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </span>
-    <span>
-      <p class="analytics-kpi__valor" data-kpi-cobertura>—</p>
-      <p class="analytics-kpi__rotulo">Cobertura de código FIPE</p>
-    </span>
-  </div>
-</div>
-
-{# ── Catálogo & busca de preço (unificados) ───────────────────────────── #}
-<div class="painel busca-preco">
-  <div class="painel__cabecalho">
-    <div>
-      <h2 class="painel__titulo">
-        <span class="busca-preco__tag">#01</span> Catálogo &amp; preço FIPE
-      </h2>
-      <p class="painel__legenda">Marca e modelo — tabela FIPE de carros.</p>
-    </div>
-  </div>
-
-  <div class="grade grade--2">
-    <div class="campo combobox" data-combobox-marca>
-      <label for="busca-marca">Marca</label>
-      <input type="text" id="busca-marca" class="combobox__input" autocomplete="off"
-             placeholder="Carregando…" disabled>
-      <input type="hidden" data-combobox-valor>
-      <div class="combobox__lista" data-combobox-lista hidden></div>
-    </div>
-    <div class="campo combobox" data-combobox-modelo>
-      <label for="busca-modelo">Modelo</label>
-      <input type="text" id="busca-modelo" class="combobox__input" autocomplete="off"
-             placeholder="Selecione a marca primeiro" disabled>
-      <input type="hidden" data-combobox-valor>
-      <div class="combobox__lista" data-combobox-lista hidden></div>
-    </div>
-  </div>
-
-  <span class="aviso" data-busca-aviso style="display:block;margin-top:10px"></span>
-
-  <div data-busca-resultado style="margin-top:16px"></div>
-
-  <div class="tabela-wrap" style="margin-top:16px">
-    <div data-busca-tabela>
-      <div class="vazio vazio--compacto">Escolha marca e modelo para ver o histórico de anos.</div>
-    </div>
-  </div>
-</div>
-
-{# ── Pipelines ─────────────────────────────────────────────────────────── #}
 <div class="painel">
-  <div class="painel__cabecalho">
-    <div>
-      <h2 class="painel__titulo">Pipelines de extração</h2>
-      <p class="painel__legenda" data-resumo-pipelines>Carregando…</p>
-    </div>
-    <div class="painel__acoes">
-      <button type="button" class="btn btn--linha btn--pequeno" data-recarregar-pipelines>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><path d="M20 12a8 8 0 10-2.5 5.8M20 8v5h-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Recarregar
-      </button>
-      <button type="button" class="btn btn--primario btn--pequeno" data-nova-pipeline>Nova pipeline</button>
-    </div>
-  </div>
+  <h2 class="painel__titulo">Consultar veículo</h2>
+  <p class="painel__legenda">Informe a placa ou o Renavam para consultar a base oficial.</p>
 
-  <div data-lista-pipelines>
-    <div class="vazio">
-      <strong>Carregando pipelines…</strong>
+  <form class="form-gov" data-form-gov>
+    <div class="campo">
+      <label for="placa">Placa</label>
+      <input type="text" id="placa" name="placa" placeholder="ABC1D23" maxlength="7">
     </div>
-  </div>
+    <div class="campo">
+      <label for="renavam">Renavam</label>
+      <input type="text" id="renavam" name="renavam" placeholder="00000000000" maxlength="11">
+    </div>
+    <button type="submit" class="btn btn--primario" data-botao-consultar-gov>Consultar</button>
+  </form>
 </div>
 
-{# ── Modal: nova/editar pipeline ──────────────────────────────────────── #}
-<div class="modal" data-modal-pipeline hidden>
-  <div class="modal__caixa" role="dialog" aria-modal="true" aria-labelledby="modal-gov-titulo">
-    <h2 class="painel__titulo" id="modal-gov-titulo" data-modal-titulo>Nova pipeline</h2>
-    <p class="painel__legenda">
-      Extrai marcas, modelos e código FIPE (todos os anos) das marcas escolhidas,
-      além da tabela de meses de referência.
-    </p>
+<div class="painel">
+  <h2 class="painel__titulo">Resultado da consulta</h2>
+  <p class="painel__legenda">Dados retornados pela base oficial para o veículo informado.</p>
 
-    <form data-form-pipeline>
-      <p class="rotulo-secao">Identificação</p>
-      <div class="campo">
-        <label for="pl-nome">Nome</label>
-        <input type="text" id="pl-nome" data-pl-nome required
-               placeholder="ex.: Extração FIPE {{ marca or 'Ford' }}">
-      </div>
-      <div class="campo">
-        <label for="pl-desc">Descrição</label>
-        <input type="text" id="pl-desc" data-pl-desc placeholder="opcional">
-      </div>
-
-      <p class="rotulo-secao rotulo-secao--espacada">Fonte</p>
-      <div class="grade grade--2">
-        <div class="campo">
-          <label for="pl-tipo">Tipo de veículo</label>
-          <select id="pl-tipo" data-pl-tipo>
-            <option value="carros">Carros</option>
-            <option value="motos">Motos</option>
-            <option value="caminhoes">Caminhões</option>
-          </select>
-        </div>
-        <div class="campo">
-          <label for="pl-marcas">Marcas-alvo</label>
-          <input type="text" id="pl-marcas" data-pl-marcas required
-                 placeholder="ex.: Ford, Chevrolet" list="pl-marcas-conhecidas">
-          <datalist id="pl-marcas-conhecidas"></datalist>
-          <p class="campo__ajuda">Nomes separados por vírgula, iguais aos da tabela FIPE (maiúsculas/minúsculas não importam).</p>
-        </div>
-      </div>
-
-      <p class="rotulo-secao rotulo-secao--espacada">Agenda</p>
-      <div class="grade grade--2">
-        <div class="campo">
-          <label for="pl-agenda">Frequência</label>
-          <select id="pl-agenda" data-pl-agenda>
-            <option value="manual">Manual</option>
-            <option value="hourly">A cada hora</option>
-            <option value="daily" selected>Diária</option>
-            <option value="weekly">Semanal</option>
-            <option value="monthly">Mensal</option>
-            <option value="cron">Cron</option>
-          </select>
-        </div>
-        <div class="campo" data-campo-hora>
-          <label for="pl-hora">Horário</label>
-          <input type="time" id="pl-hora" data-pl-hora value="08:00">
-        </div>
-        <div class="campo" data-campo-cron hidden>
-          <label for="pl-cron">Expressão cron</label>
-          <input type="text" id="pl-cron" data-pl-cron placeholder="0 8 * * *">
-        </div>
-      </div>
-
-      <div class="modal__acoes">
-        <button type="button" class="btn btn--linha" data-fechar-modal-pipeline>Cancelar</button>
-        <button type="submit" class="btn btn--primario" data-confirmar-pipeline>Criar pipeline</button>
-      </div>
-      <span class="aviso" data-aviso-modal-pipeline></span>
-    </form>
+  <div data-resultado-gov>
+    <div class="vazio">
+      <strong>Nenhuma consulta realizada ainda</strong>
+      Informe a placa ou o Renavam acima para consultar a base do governo.
+    </div>
   </div>
 </div>
 
 {% endblock %}
 
 {% block extra_js %}
-<script>window.GOV_MARCA_QUERY = {{ marca|tojson }};</script>
 <script src="{{ url_for('static', filename='gov/script.js') }}"></script>
 {% endblock %}

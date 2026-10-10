@@ -6,13 +6,22 @@ scrapers reais nem BigQuery real: injeta um warehouse falso no lugar de
 `scraper_warehouse` e um settings falso no lugar de `settings`, mesmo
 espírito de tests/test_scraper_warehouse.py.
 """
+import asyncio
 import sys
 from pathlib import Path
+
+import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.api import specs_api
-from src.api.specs_api import ExecutarRequest, _salvar_no_warehouse
+from src.api.specs_api import (
+    ExecutarRequest,
+    _buscar_historico_bigquery,
+    _fontes_saudaveis,
+    _salvar_no_warehouse,
+    _verificar_saude_fonte,
+)
 from src.utils.normalizador import categorizar_atributo, normalizar
 
 falhas = []
@@ -108,6 +117,114 @@ def principal() -> int:
         checar(True, "upsert falhando não propaga exceção (best-effort)")
     except Exception as exc:
         checar(False, f"upsert falhando NÃO deveria propagar exceção, mas propagou: {exc}")
+
+    print("\n=== 5. _verificar_saude_fonte trata exceção e catálogo pequeno como não-saudável ===")
+
+    class FonteFalsa:
+        def __init__(self, resultado=None, excecao=None):
+            self._resultado = resultado
+            self._excecao = excecao
+
+        async def obter_fabricantes(self):
+            if self._excecao:
+                raise self._excecao
+            return self._resultado
+
+    saudavel = asyncio.run(_verificar_saude_fonte(
+        "fake", FonteFalsa(resultado=[{"nome_exibicao": f"Marca {i}"} for i in range(20)])
+    ))
+    checar(saudavel is True, "catálogo com dezenas de fabricantes -> saudável")
+
+    nao_saudavel_pequeno = asyncio.run(_verificar_saude_fonte(
+        "fake", FonteFalsa(resultado=[{"nome_exibicao": "Só Uma"}])
+    ))
+    checar(nao_saudavel_pequeno is False, "catálogo com poucos fabricantes (< limiar) -> não-saudável")
+
+    nao_saudavel_excecao = asyncio.run(_verificar_saude_fonte(
+        "fake", FonteFalsa(excecao=ConnectionError("fora do ar"))
+    ))
+    checar(nao_saudavel_excecao is False, "exceção na fonte -> não-saudável")
+
+    print("\n=== 6. _fontes_saudaveis() filtra fonte não-saudável, mas nunca esvazia por completo ===")
+
+    saude_original = dict(specs_api._SAUDE_FONTES)
+    try:
+        nomes = list(specs_api.FONTES.keys())
+        checar(len(nomes) >= 3, "FONTES tem as 3 fontes esperadas (carrosnaweb, icarros, fichacompleta)")
+
+        specs_api._SAUDE_FONTES.clear()
+        specs_api._SAUDE_FONTES.update({nomes[0]: False, nomes[1]: True, nomes[2]: True})
+        saudaveis = _fontes_saudaveis()
+        checar(nomes[0] not in saudaveis, "fonte marcada como não-saudável é excluída")
+        checar(nomes[1] in saudaveis and nomes[2] in saudaveis, "fontes saudáveis continuam presentes")
+
+        specs_api._SAUDE_FONTES.clear()
+        specs_api._SAUDE_FONTES.update({nome: False for nome in nomes})
+        saudaveis_todas_ruins = _fontes_saudaveis()
+        checar(
+            set(saudaveis_todas_ruins.keys()) == set(nomes),
+            "todas marcadas como não-saudáveis -> degrada pra usar todas mesmo assim",
+        )
+    finally:
+        specs_api._SAUDE_FONTES.clear()
+        specs_api._SAUDE_FONTES.update(saude_original)
+
+    print("\n=== 7. _buscar_historico_bigquery — histórico como último recurso ===")
+
+    class WarehouseComHistorico:
+        def __init__(self, df):
+            self._df = df
+
+        def table_id(self, nome):
+            return f"projeto.dataset.{nome}"
+
+        def query(self, sql, params=None):
+            return self._df
+
+    df_historico = pd.DataFrame([
+        {"atributo": "Potência", "valor": "272 cv", "fonte": "icarros"},
+        {"atributo": "Torque", "valor": "42 kgfm", "fonte": "icarros"},
+    ])
+    specs_api.scraper_warehouse = WarehouseComHistorico(df_historico)
+    specs_api.settings = SettingsFalso(configurado=True)
+
+    historico = _buscar_historico_bigquery("Ford", "Ranger", "XLT 3.2")
+    checar(historico is not None and len(historico) == 2, "devolve as linhas do histórico")
+    if historico:
+        checar(
+            all("categoria" in linha for linha in historico),
+            "cada linha ganha 'categoria' via categorizar_atributo",
+        )
+
+    print("\n=== 8. _buscar_historico_bigquery — casos que devolvem None sem propagar ===")
+
+    specs_api.settings = SettingsFalso(configurado=False)
+    checar(_buscar_historico_bigquery("Ford", "Ranger", "XLT 3.2") is None, "BigQuery não configurado -> None")
+
+    class WarehouseVazio:
+        def table_id(self, nome):
+            return f"projeto.dataset.{nome}"
+
+        def query(self, sql, params=None):
+            return pd.DataFrame([])
+
+    specs_api.scraper_warehouse = WarehouseVazio()
+    specs_api.settings = SettingsFalso(configurado=True)
+    checar(_buscar_historico_bigquery("Ford", "Ranger", "XLT 3.2") is None, "resultado vazio -> None")
+
+    class WarehouseQueFalhaConsulta:
+        def table_id(self, nome):
+            return f"projeto.dataset.{nome}"
+
+        def query(self, sql, params=None):
+            raise RuntimeError("BigQuery indisponível (simulado)")
+
+    specs_api.scraper_warehouse = WarehouseQueFalhaConsulta()
+    try:
+        resultado = _buscar_historico_bigquery("Ford", "Ranger", "XLT 3.2")
+        checar(resultado is None, "consulta falhando -> None, sem propagar exceção")
+    except Exception as exc:
+        checar(False, f"consulta falhando NÃO deveria propagar exceção, mas propagou: {exc}")
 
     print("\n" + "=" * 62)
     if falhas:

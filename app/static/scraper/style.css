@@ -346,29 +346,96 @@
 
 .modal__caixa--larga { width: min(760px, 100%); }
 
-.scraper-campo-livre {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 8px;
+.scraper-campo-livre,
+.scraper-filtro-linha {
+  display: flex;
   align-items: center;
+  gap: 4px;
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-pill);
+  padding: 4px 6px 4px 14px;
   margin-bottom: 6px;
 }
 
-.scraper-campo-livre input { font-family: var(--font-mono); font-size: 12px; }
+.scraper-campo-livre:last-child,
+.scraper-filtro-linha:last-child { margin-bottom: 0; }
 
-.scraper-filtro-linha {
-  display: grid;
-  grid-template-columns: 1fr 1fr 140px;
-  gap: 8px;
-  align-items: center;
+.scraper-campo-livre input,
+.scraper-filtro-linha .mono {
+  flex: 1 1 0;
+  min-width: 0;
+  font-family: var(--font-mono);
   font-size: 12px;
-  padding: 5px 0;
-  border-bottom: 1px solid var(--hairline);
 }
 
-.scraper-filtro-linha:last-child { border-bottom: none; }
+.scraper-campo-livre input {
+  border: none;
+  background: transparent;
+  padding: 4px 2px;
+  color: var(--text-primary);
+}
 
-.scraper-filtro-linha .mono { font-family: var(--font-mono); color: var(--text-muted); }
+.scraper-campo-livre input:focus { outline: none; }
+
+.scraper-campo-livre input + input { border-left: 1px solid var(--hairline); padding-left: 10px; }
+
+.scraper-filtro-linha .mono {
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scraper-filtro-linha select {
+  flex: 0 0 auto;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-pill);
+  padding: 3px 10px;
+  font-size: 11.5px;
+}
+
+.scraper-campo-livre .fluxo-etapa__acao,
+.scraper-filtro-linha .fluxo-etapa__acao {
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+
+.scraper-filtro-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.scraper-filtro-add input,
+.scraper-filtro-add select {
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+.scraper-filtro-add input:focus,
+.scraper-filtro-add select:focus {
+  border-color: var(--mode-accent, var(--accent-scraper));
+  outline: none;
+}
+
+.scraper-filtro-add input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 14px;
+  font-size: 13px;
+}
+
+.scraper-filtro-add select {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  font-size: 12.5px;
+}
 
 /* ---------- dados coletados (por site registrado) ---------- */
 

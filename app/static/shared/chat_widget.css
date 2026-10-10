@@ -1,0 +1,174 @@
+/* ============================================================
+   CHAT WIDGET — bolha flutuante global, presente em toda página
+   (ver app/static/shared/chat_widget.js). Único CSS de componente
+   realmente compartilhado entre páginas — o widget é o mesmo em
+   qualquer modo, ao contrário do CSS pequeno duplicado por página
+   (.dobra/.combobox/etc.), que é intencionalmente independente por tela.
+   ============================================================ */
+
+.chatw-bolha {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-pill);
+  background: var(--mode-accent, var(--accent-home));
+  color: #fff;
+  border: none;
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chatw-bolha svg { width: 24px; height: 24px; }
+
+.chatw-painel {
+  position: fixed;
+  right: 24px;
+  bottom: 88px;
+  width: 340px;
+  max-width: calc(100vw - 48px);
+  height: 440px;
+  max-height: calc(100vh - 140px);
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1000;
+  font-family: inherit;
+}
+
+.chatw-cabecalho {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--hairline);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--mode-accent, var(--accent-home));
+  color: #fff;
+}
+
+.chatw-cabecalho__titulo { font-size: 13px; font-weight: 600; }
+.chatw-cabecalho__pagina { font-size: 11px; opacity: .8; }
+
+.chatw-fechar {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 6px;
+}
+
+.chatw-mensagens {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chatw-msg {
+  max-width: 85%;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.chatw-msg--usuario {
+  align-self: flex-end;
+  background: var(--mode-accent, var(--accent-home));
+  color: #fff;
+  border-bottom-right-radius: 2px;
+}
+
+.chatw-msg--assistente {
+  align-self: flex-start;
+  background: var(--bg-panel-raised);
+  color: var(--text-primary);
+  border-bottom-left-radius: 2px;
+}
+
+.chatw-msg--erro {
+  align-self: stretch;
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.chatw-msg--sistema {
+  align-self: stretch;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.chatw-sugestoes {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-self: stretch;
+}
+
+.chatw-chip {
+  text-align: left;
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-pill);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--text-primary);
+  cursor: pointer;
+  line-height: 1.3;
+}
+
+.chatw-chip:hover {
+  border-color: var(--mode-accent, var(--accent-home));
+  color: var(--mode-accent, var(--accent-home));
+}
+
+.chatw-rodape {
+  border-top: 1px solid var(--hairline);
+  padding: 10px;
+  display: flex;
+  gap: 6px;
+}
+
+.chatw-campo {
+  flex: 1;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-pill);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-primary);
+}
+
+.chatw-campo:disabled { color: var(--text-faint); }
+
+.chatw-enviar {
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--mode-accent, var(--accent-home));
+  color: #fff;
+  padding: 0 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.chatw-enviar:disabled { opacity: .5; cursor: default; }
+
+[hidden] { display: none !important; }

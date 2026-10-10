@@ -1,0 +1,77 @@
+{% extends "_layout/dashboard_base.html" %}
+
+{% block titulo %}Base de Conhecimento{% endblock %}
+{% block mode_accent %}--accent-conhecimento{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='conhecimento/style.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page__header">
+  <div>
+    <h1 class="page__titulo">Base de Conhecimento</h1>
+    <p class="page__descricao">
+      Visualização do banco vetorial que indexa transcrições de vídeos, PDFs
+      de ficha técnica e comentários coletados — cada ponto é um "vetor" e cada
+      linha uma similaridade semântica entre conteúdos.
+    </p>
+  </div>
+</div>
+
+<div class="analytics-kpis">
+  <div class="analytics-kpi">
+    <span class="analytics-kpi__icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2" stroke-linecap="round"/></svg></span>
+    <span><p class="analytics-kpi__valor" data-conh-kpi-vetores>—</p><p class="analytics-kpi__rotulo">Vetores indexados</p></span>
+  </div>
+  <div class="analytics-kpi">
+    <span class="analytics-kpi__icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16M9 9v11" /></svg></span>
+    <span><p class="analytics-kpi__valor" data-conh-kpi-dimensoes>—</p><p class="analytics-kpi__rotulo">Dimensões por embedding</p></span>
+  </div>
+  <div class="analytics-kpi">
+    <span class="analytics-kpi__icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10" stroke-linecap="round"/></svg></span>
+    <span><p class="analytics-kpi__valor" data-conh-kpi-colecoes>—</p><p class="analytics-kpi__rotulo">Coleções</p></span>
+  </div>
+  <div class="analytics-kpi">
+    <span class="analytics-kpi__icone analytics-kpi__icone--ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 18l5-5 4 3 7-8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span><p class="analytics-kpi__valor" data-conh-kpi-indice>HNSW</p><p class="analytics-kpi__rotulo">Tipo de índice</p></span>
+  </div>
+</div>
+
+<div class="painel">
+  <div class="painel__cabecalho">
+    <div>
+      <h2 class="painel__titulo">Busca por similaridade semântica</h2>
+      <p class="painel__legenda">Combine termos pra encontrar os vetores mais próximos semanticamente.</p>
+    </div>
+    <div class="painel__acoes conh-busca">
+      <input type="text" class="conh-busca__campo" data-conh-busca-campo
+             placeholder="ex.: consumo de combustível, freios, motor turbo…">
+      <button type="button" class="btn btn--primario btn--pequeno" data-conh-busca-botao>Buscar</button>
+      <button type="button" class="btn btn--linha btn--pequeno" data-conh-busca-limpar>Limpar</button>
+    </div>
+  </div>
+
+  <div class="conh-legenda" data-conh-legenda></div>
+
+  <div class="conh-layout">
+    <div class="conh-grafo-wrap">
+      <div class="conh-grafo" data-conh-grafo></div>
+      <p class="conh-grafo__dica">Arraste pra reorganizar · clique num ponto pra ver os detalhes · role pra dar zoom</p>
+    </div>
+
+    <aside class="conh-painel-lateral" data-conh-painel>
+      <div class="vazio vazio--compacto" data-conh-painel-vazio>
+        Clique num vetor do grafo (ou faça uma busca) pra ver os detalhes aqui.
+      </div>
+    </aside>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/10.1.2/standalone/umd/vis-network.min.js"></script>
+<script src="{{ url_for('static', filename='conhecimento/script.js') }}"></script>
+{% endblock %}

@@ -14,6 +14,8 @@ Endpoints disponíveis:
     /gov/*        catálogo FIPE (marca/modelo/ano) e suas pipelines — BigQuery
     /scraper/*    auto-discovery de sites de carro (ficha técnica/anúncios/
                   comentários) e suas pipelines — BigQuery
+    /chat/*       chatbot simples — responde só com base no dado carregado/
+                  filtrado na página atual (widget global do frontend)
 
 Documentação interativa:
     http://localhost:8000/docs
@@ -24,11 +26,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.analytics_api import router as analytics_router
+from src.api.chat_api import router as chat_router
 from src.api.gov_api import router as gov_router
 from src.api.pipelines_api import router as pipelines_router
 from src.api.prompts_api import router as prompts_router
 from src.api.scraper_api import router as scraper_router
+from src.api.social_api import router as social_router
 from src.api.specs_api import router as specs_router
+from src.api.specs_api import verificar_saude_todas_fontes as _verificar_saude_specs
 from src.api.youtube_api import router as youtube_router
 from src.scraper.exemplos import garantir_sites_exemplo
 
@@ -66,6 +71,8 @@ app.include_router(pipelines_router)
 app.include_router(analytics_router)
 app.include_router(gov_router)
 app.include_router(scraper_router)
+app.include_router(chat_router)
+app.include_router(social_router)
 
 
 @app.on_event("startup")
@@ -74,6 +81,33 @@ def _seed_scraper_sites() -> None:
     CarroNaWeb), com o mapeamento completo já validado — modelo do fluxo pra
     quem for cadastrar um site novo. Recria só o que estiver faltando."""
     garantir_sites_exemplo()
+
+
+@app.on_event("startup")
+def _seed_prompts_fixos() -> None:
+    """Garante que os prompts fixos do sistema (enriquecimento de
+    comentários, extração de vídeos, análise de posts em redes sociais) já
+    apareçam na aba Prompts desde o primeiro boot — sem isso, cada um só é
+    criado (lazy) na primeira vez que a pipeline realmente roda esse passo,
+    o que deixava a extração de vídeos "invisível" até alguém executar o
+    Playground pelo menos uma vez."""
+    from src.analytics.enrichment import garantir_prompt as garantir_prompt_comentarios
+    from src.analytics.video_extraction import garantir_prompt as garantir_prompt_videos
+    from src.social.enrichment import garantir_prompt as garantir_prompt_social
+
+    garantir_prompt_comentarios()
+    garantir_prompt_videos()
+    garantir_prompt_social()
+
+
+@app.on_event("startup")
+async def _verificar_saude_fontes_specs() -> None:
+    """Health check das 3 fontes de `/specs/*` (carrosnaweb, icarros,
+    fichacompleta) — roda uma vez no startup e tira de circulação
+    qualquer fonte que não estiver trazendo dado de verdade (site fora do
+    ar, ou "respondendo OK" mas com uma página de erro/bloqueio no lugar
+    do catálogo). Ver `src/api/specs_api.py::verificar_saude_todas_fontes`."""
+    await _verificar_saude_specs()
 
 
 # ── Execução direta ───────────────────────────────────────────────────────────

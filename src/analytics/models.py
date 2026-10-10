@@ -37,3 +37,35 @@ class AnaliseComentarioStruct(BaseModel):
         if not isinstance(valor, str) or not valor.strip():
             raise ValueError("campo obrigatório e não pode ser vazio")
         return valor.strip()
+
+
+class ExtracaoVideoStruct(BaseModel):
+    """
+    Struct fixo da extração automática de vídeos — mesma ideia de
+    `AnaliseComentarioStruct`, mas por vídeo (título + transcrição) em vez
+    de por comentário. Ver `src/analytics/video_extraction.py`.
+    """
+    resumo: str
+    topicos: list[str] = Field(default_factory=list)
+    modelos_mencionados: list[str] = Field(default_factory=list)
+    pontos_positivos: list[str] = Field(default_factory=list)
+    pontos_negativos: list[str] = Field(default_factory=list)
+
+    @field_validator(
+        "topicos", "modelos_mencionados", "pontos_positivos", "pontos_negativos",
+        mode="before",
+    )
+    @classmethod
+    def _normalizar_listas(cls, valor):
+        if valor is None:
+            return []
+        if isinstance(valor, str):
+            return [valor]
+        return list(valor)
+
+    @field_validator("resumo", mode="before")
+    @classmethod
+    def _exigir_resumo(cls, valor):
+        if not isinstance(valor, str) or not valor.strip():
+            raise ValueError("campo obrigatório e não pode ser vazio")
+        return valor.strip()

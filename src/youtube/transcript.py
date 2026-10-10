@@ -75,7 +75,14 @@ class TranscriptAPI:
         self._proxy_pool_resolvido: ProxyPool | None = proxy_pool
 
     def _obter_pool(self) -> ProxyPool:
-        """Resolve e cacheia o pool — chamado só depois de um bloqueio real."""
+        """Resolve e cacheia o pool — chamado só depois de um bloqueio real.
+        Nunca resolve a lista estática quando o Webshare nativo está
+        configurado: esse tem prioridade (ver `_proxy_configs_para_retentativa`)
+        e não deveria pagar o custo de baixar/ler a lista à toa — reforçado
+        aqui também, pra nenhum chamador futuro de `_obter_pool()` acabar
+        contornando essa prioridade sem querer."""
+        if self._webshare_credenciais:
+            return ProxyPool.vazio()
         if self._proxy_pool_resolvido is None:
             self._proxy_pool_resolvido = resolver_pool_padrao()
         return self._proxy_pool_resolvido

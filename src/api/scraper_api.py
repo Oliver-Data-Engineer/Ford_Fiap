@@ -57,7 +57,7 @@ from src.agents import listar_providers
 from src.bigquery_warehouse import registros_serializaveis
 from src.config import ENV_VAR_POR_PROVIDER, settings
 from src.pipelines.models import ErroStep, StatusPipeline, agora_iso
-from src.scraper import browser, discovery, executor, extractor, schemas, store, warehouse
+from src.scraper import browser, discovery, executor, extractor, schemas, store, url_utils, warehouse
 from src.scraper.dag_generator import descrever_schedule, gerar_codigo, gerar_dag, montar_cron, montar_dag_id
 from src.scraper.modelos_llm import MODELOS_CURADOS
 from src.scraper.models import (
@@ -318,6 +318,17 @@ async def editar_etapa(site_id: str, objetivo: TipoObjetivoScraper, ordem: int, 
     site = _exigir_site(site_id)
     _, etapa = _exigir_etapa(site, objetivo, ordem)
 
+    # Só os três campos abaixo afetam o RESULTADO da extração — filtros/
+    # url_template são metadados de navegação (§14.11), não mudam o que o
+    # seletor lê. Reenviar os mesmos valores já testados (ex.: o botão
+    # "Salvar" logo depois de um "Testar" bem-sucedido) não deve derrubar
+    # `validado_em`; só uma mudança de verdade nesses campos invalida.
+    afeta_extracao = (
+        (body.url_amostra is not None and body.url_amostra != etapa.url_amostra)
+        or (body.selectors is not None and body.selectors != etapa.selectors)
+        or (body.campo_herdado is not None and (body.campo_herdado or None) != etapa.campo_herdado)
+    )
+
     if body.url_amostra is not None:
         etapa.url_amostra = body.url_amostra
     if body.selectors is not None:
@@ -326,11 +337,19 @@ async def editar_etapa(site_id: str, objetivo: TipoObjetivoScraper, ordem: int, 
         etapa.campo_herdado = body.campo_herdado or None
     if body.filtros is not None:
         etapa.filtros = [FiltroParam(**f) for f in body.filtros]
-    if body.url_template is not None:
+        # Recalculado sempre que a lista de filtros muda — cobre tanto
+        # filtro detectado (query string) quanto filtro adicionado à mão
+        # (posicional no path, ex.: ".../busca/ford/2026") — ver
+        # `url_utils.montar_template`. Ignora `body.url_template` quando
+        # `filtros` também vem no corpo: o cálculo daqui é a fonte de
+        # verdade, nunca um valor calculado no frontend.
+        etapa.url_template = url_utils.montar_template(etapa.url_amostra, etapa.filtros)
+    elif body.url_template is not None:
         etapa.url_template = body.url_template
 
-    etapa.validado_em = None  # edição manual invalida o teste anterior desta etapa
-    site.registrado = False
+    if afeta_extracao:
+        etapa.validado_em = None  # mudança real na extração invalida o teste anterior desta etapa
+        site.registrado = False
 
     store.salvar_site(site)
     return {"etapa": etapa.model_dump(mode="json"), "site": _resumo_site(site)}

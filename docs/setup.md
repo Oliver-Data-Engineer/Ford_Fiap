@@ -193,8 +193,7 @@ O Flask serve o frontend e atua como proxy para a FastAPI.
 
 **Terminal 2** (com o venv ativado):
 ```bash
-flask --app app/app.py run --port 5000 --debug
-```
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 **Alternativa (equivalente):**
 ```bash

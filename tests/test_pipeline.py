@@ -149,6 +149,20 @@ class LLMFalso(OpenAICompatProvider):
                        max_tokens=None, json_mode=False):
         LLMFalso.chamadas.append({"system": system_prompt, "user": user_prompt})
 
+        # Extração automática de vídeos (src/analytics/video_extraction.py)
+        # espera o struct fixo resumo/topicos/modelos_mencionados/pontos_*.
+        if '"modelos_mencionados"' in system_prompt:
+            return ProviderResponse(
+                text=json.dumps({
+                    "resumo": "Resumo de teste do vídeo.",
+                    "topicos": ["motor", "consumo"],
+                    "modelos_mencionados": ["Ford Territory"],
+                    "pontos_positivos": ["motor forte"],
+                    "pontos_negativos": ["consumo alto"],
+                }),
+                usage={"prompt_tokens": 15, "completion_tokens": 15, "total_tokens": 30},
+            )
+
         # Enriquecimento automático de comentários (src/analytics/enrichment.py)
         # espera um item por comentário recebido, correlacionado por índice.
         if '"comentarios"' in system_prompt:
@@ -305,6 +319,15 @@ async def principal():
     checar(all(r["struct"]["sentimento"] for r in enriquecimento),
            "cada item da amostra tem o struct fixo preenchido (sentimento/motivo/adjetivos/objeto)")
 
+    # ── Extração automática de vídeos (um por vídeo com transcrição) ──
+    extracao = run.trust.get("extracao_videos", [])
+    checar(len(extracao) == 2,
+           f"um item por vídeo com transcrição, 2 de 2 (obtido {len(extracao)})")
+    checar(all(r["success"] for r in extracao),
+           "os 2 vídeos foram extraídos com sucesso")
+    checar(all(r["struct"]["resumo"] for r in extracao),
+           "cada item tem o struct fixo preenchido (resumo/topicos/modelos_mencionados/pontos_*)")
+
     # ── TRUST ──
     trust = run.trust
     checar(len(trust["analises"]) == 4,
@@ -322,10 +345,12 @@ async def principal():
     checar("refined_record_ids" in primeira["source"],
            "TRUST aponta os registros REFINED de origem")
     # 640 dos 4 chamados de AGENT + 20 de uma única chamada do enriquecimento
-    # automático de comentários — a amostra fixa (MAX_COMENTARIOS_
-    # ENRIQUECIMENTO_AUTOMATICO=3) cabe inteira nos 3 comentários do
-    # primeiro vídeo, então não chega a precisar de uma segunda chamada.
-    checar(run.usage["total_tokens"] == 660, f"uso somado (obtido {run.usage['total_tokens']})")
+    # automático de comentários (a amostra fixa, MAX_COMENTARIOS_
+    # ENRIQUECIMENTO_AUTOMATICO=3, cabe inteira nos 3 comentários do
+    # primeiro vídeo, então não chega a precisar de uma segunda chamada) +
+    # 60 de 2 chamadas da extração automática de vídeos (uma por vídeo com
+    # transcrição) = 720.
+    checar(run.usage["total_tokens"] == 720, f"uso somado (obtido {run.usage['total_tokens']})")
 
     # entradas por tipo de prompt
     do_coments = [a for a in trust["analises"] if a["input_type"] == "comments"]

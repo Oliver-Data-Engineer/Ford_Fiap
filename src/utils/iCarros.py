@@ -31,6 +31,7 @@ from urllib.parse import quote_plus
 
 from bs4 import BeautifulSoup
 
+from src.utils.deteccao_bloqueio import parece_bloqueado_ou_erro
 from src.utils.html_encoding import decodificar_html_bytes
 
 try:
@@ -64,17 +65,6 @@ def _limpar(texto: str) -> str:
     if not texto:
         return ""
     return " ".join(texto.split()).strip()
-
-
-def _is_blocked(html: str) -> bool:
-    """Detecta páginas de captcha / Cloudflare."""
-    markers = [
-        "cf-browser-verification", "just a moment",
-        "enable javascript and cookies", "captcha",
-        "access denied", "bot detection", "verifying you are human",
-    ]
-    lower = html.lower()
-    return any(m in lower for m in markers) and len(html) < 20_000
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -139,7 +129,7 @@ class CarrosWeb:
                     await asyncio.sleep(2 ** attempt)
                     continue
 
-                if _is_blocked(resp.text):
+                if parece_bloqueado_ou_erro(resp.text):
                     logger.warning("[iCarros] Bloqueio/captcha detectado: %s", url)
                     # Não faz sentido tentar de novo imediatamente
                     return None
@@ -250,6 +240,19 @@ class CarrosWeb:
         return modelos
 
     # ── Versões ───────────────────────────────────────────────────────────────
+
+    def montar_url_modelo(self, fabricante: str, modelo: str) -> str:
+        """URL de catálogo (listagem de versões) pra um (fabricante, modelo)
+        — esquema próprio do iCarros, bem diferente do `catalogo.asp` do
+        CarrosWeb. `specs_api.py` chama isto em vez de montar a URL na mão
+        (esse era o bug: usar o esquema do CarrosWeb pras duas fontes
+        fazia toda consulta de versões/ficha do iCarros cair numa URL que
+        não existe no site deles). `modelo` normalmente já vem como o slug
+        de `obter_modelos()` (`id_busca`), mas passa por `_slugify` de
+        qualquer forma — idempotente pra slug, e ainda funciona (na
+        medida do possível) se vier um nome não-slugificado de outra
+        fonte."""
+        return f"{self.base_url}/catalogo-zero-km/marcas/{_slugify(fabricante)}/{_slugify(modelo)}/"
 
     async def extrair_versoes(self, url: str) -> list[dict]:
         """

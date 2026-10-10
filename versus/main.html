@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nexora Apex vs Voltera EV9 vs Taurus Raptor X</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg-base:#ffffff; --bg-panel:#ffffff; --bg-panel-raised:#f4f5f7;
+  --hairline:#e4e7eb; --hairline-strong:#cdd3db;
+  --text-primary:#16233a; --text-muted:#5b6472; --text-faint:#8b93a1;
+  --accent-home:#00095b; --accent-scraping:#0f6e6e; --accent-youtube:#b3423a;
+  --accent-x:#4b4f8a; --accent-gov:#2f6b46; --accent-pipeline:#1d4ed8;
+  --accent-compare:#8a3b5e; --accent-analytics:#b3672e; --accent-scraper:#6d3fa0;
+  --ok:#1c7a4d; --warn:#b7791e; --danger:#c1443a;
+  --radius:8px; --radius-lg:16px; --radius-pill:999px;
+  --shadow-sm:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+  --shadow-md:0 4px 16px rgba(16,24,40,.10);
+  --font-sans:'Poppins','Segoe UI',system-ui,sans-serif;
+  --font-mono:'IBM Plex Mono','SFMono-Regular',Consolas,monospace;
+  --font-disp:'Anton','Arial Narrow',sans-serif;
+  --ca:var(--accent-home);
+  --cb:var(--accent-scraping);
+  --cc:var(--danger);
+  --win:var(--ok);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0}
+html{font-size:16px;scroll-behavior:smooth}
+body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-primary);line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font-family:var(--font-sans)}
+
+/* NAV */
+.topnav{position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:24px;padding:0 28px;height:64px;background:var(--bg-panel);border-bottom:1px solid var(--hairline);box-shadow:var(--shadow-sm)}
+.logo{font-family:var(--font-disp);font-size:21px;color:var(--text-primary);text-decoration:none}
+.nav-cats{display:flex;gap:20px;list-style:none;padding:0}
+.nav-cats a{font-size:13px;font-weight:500;color:var(--text-muted);text-decoration:none;transition:color .15s}
+.nav-cats a:hover{color:var(--text-primary)}
+.nav-end{margin-left:auto}
+.search-pill{display:flex;align-items:center;gap:8px;padding:7px 16px;background:var(--bg-panel-raised);border:1px solid var(--hairline-strong);border-radius:var(--radius-pill);color:var(--text-muted);font-size:13px;cursor:pointer;box-shadow:var(--shadow-sm)}
+
+/* MAIN */
+main{max-width:1140px;margin:0 auto;padding:0 28px 80px}
+
+/* HERO */
+.hero{padding:44px 0 0;text-align:center}
+.decided-badge{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--win);margin-bottom:20px}
+.decided-badge::before,.decided-badge::after{content:'';display:block;width:28px;height:1px;background:currentColor;opacity:.5}
+.cars-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.car-card{display:flex;flex-direction:column;align-items:center;padding:24px 16px 20px;gap:14px;background:var(--bg-panel);border:1px solid var(--hairline);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);transition:box-shadow .2s,transform .2s;cursor:default}
+.car-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.ca-card{border-top:3px solid var(--ca)}
+.cb-card{border-top:3px solid var(--cb)}
+.cc-card{border-top:3px solid var(--cc)}
+.car-name{font-family:var(--font-disp);font-size:clamp(15px,2.2vw,23px);letter-spacing:.03em;text-transform:uppercase;line-height:1.1}
+.ca-card .car-name{color:var(--ca)}
+.cb-card .car-name{color:var(--cb)}
+.cc-card .car-name{color:var(--cc)}
+.car-tagline{font-size:11px;font-weight:500;color:var(--text-faint);letter-spacing:.04em}
+.car-viz{width:100%;display:flex;align-items:center;justify-content:center;min-height:95px;padding:6px 0}
+.car-viz svg{width:100%;max-width:200px;height:auto}
+
+/* SCORE RING */
+.score-wrap{position:relative;width:62px;height:62px;flex-shrink:0}
+.score-wrap svg{transform:rotate(-90deg)}
+.ring-track{stroke:var(--hairline-strong)}
+.ca-card .ring-val{stroke:var(--ca)}
+.cb-card .ring-val{stroke:var(--cb)}
+.cc-card .ring-val{stroke:var(--cc)}
+.score-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-disp);font-size:19px}
+.ca-card .score-num{color:var(--ca)}
+.cb-card .score-num{color:var(--cb)}
+.cc-card .score-num{color:var(--cc)}
+
+.buy-link{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--hairline-strong);border-radius:var(--radius-pill);font-size:12px;color:var(--text-muted);text-decoration:none;transition:border-color .15s,color .15s;white-space:nowrap;font-weight:500}
+.buy-link:hover{border-color:var(--text-muted);color:var(--text-primary)}
+.price-em{font-family:var(--font-mono);color:var(--text-primary);font-weight:600}
+
+/* VERDICT */
+.verdict{text-align:center;padding:22px 0;border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline);margin:10px 0 52px}
+.verdict-eye{font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--text-faint);margin-bottom:10px}
+.verdict-txt{font-size:clamp(15px,1.8vw,20px);font-weight:400}
+.verdict-txt strong{color:var(--ca);font-weight:700}
+
+/* RADAR */
+.radar-section{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start;margin-bottom:52px}
+.sec-head{font-family:var(--font-disp);font-size:clamp(18px,2.8vw,28px);letter-spacing:.05em;text-transform:uppercase;color:var(--text-primary);margin-bottom:4px}
+.sec-sub{font-size:13px;color:var(--text-muted);margin-bottom:18px}
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:18px}
+.leg-item{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-muted)}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+#radarCanvas{display:block;width:100%;max-width:360px;height:auto}
+
+/* DIFF TABLE */
+.diff-head{font-family:var(--font-disp);font-size:18px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-primary);margin-bottom:14px}
+.dtbl{width:100%;border-collapse:collapse}
+.dtbl th,.dtbl td{padding:9px 10px;border-bottom:1px solid var(--hairline);text-align:left;vertical-align:middle}
+.dtbl th{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint)}
+.dtbl th.la{color:var(--ca)}
+.dtbl th.lb{color:var(--cb)}
+.dtbl th.lc{color:var(--cc)}
+.dtbl td{font-size:12.5px;font-family:var(--font-mono);color:var(--text-muted)}
+.dtbl td:first-child{font-family:var(--font-sans);font-size:12px}
+.dtbl .hi{color:var(--text-primary);font-weight:600}
+.dtbl .adv{color:var(--win);font-weight:600;font-size:11.5px}
+.more-link{font-size:13px;color:var(--text-muted);text-decoration:none;display:block;margin-top:12px}
+.more-link:hover{color:var(--text-primary)}
+
+/* SPECS */
+.specs-section{margin-bottom:52px}
+.spec-block{border:1px solid var(--hairline);border-radius:var(--radius);overflow:hidden;margin-bottom:8px;background:var(--bg-panel);box-shadow:var(--shadow-sm)}
+.spec-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:transparent;border:none;cursor:pointer;text-align:left;color:var(--text-primary);gap:10px}
+.spec-toggle:hover{background:var(--bg-panel-raised)}
+.cat-name{font-family:var(--font-disp);font-size:14px;letter-spacing:.07em;text-transform:uppercase}
+.spec-right{display:flex;align-items:center;gap:10px}
+.win-chip{font-size:11px;font-weight:600;padding:2px 10px;border-radius:var(--radius-pill);white-space:nowrap}
+.wa{color:var(--ca);background:rgba(0,9,91,.08)}
+.wb{color:var(--cb);background:rgba(15,110,110,.10)}
+.wc{color:var(--cc);background:rgba(193,68,58,.10)}
+.wt{color:var(--text-muted);background:var(--bg-panel-raised)}
+.chev{color:var(--text-faint);font-size:14px;transition:transform .2s;flex-shrink:0}
+.spec-block.open .chev{transform:rotate(180deg)}
+.spec-body{display:none;border-top:1px solid var(--hairline)}
+.spec-block.open .spec-body{display:block}
+.stbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.stbl th,.stbl td{padding:10px 18px;border-bottom:1px solid var(--hairline);text-align:left}
+.stbl tr:last-child td{border-bottom:none}
+.stbl th{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);background:var(--bg-panel-raised)}
+.stbl th.la{color:var(--ca)}
+.stbl th.lb{color:var(--cb)}
+.stbl th.lc{color:var(--cc)}
+.stbl td{font-family:var(--font-mono);color:var(--text-muted);vertical-align:middle}
+.stbl td:first-child{font-family:var(--font-sans)}
+.stbl .wv{color:var(--text-primary);font-weight:600}
+.ico-y{color:var(--ok)}
+.ico-n{color:var(--text-faint)}
+
+/* YOUTUBE SECTION */
+.yt-section{margin-bottom:52px}
+.yt-head-row{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+.yt-pill{display:inline-flex;align-items:center;justify-content:center;width:34px;height:24px;background:var(--accent-youtube);border-radius:6px;flex-shrink:0}
+.yt-pill::after{content:'';border-left:10px solid #fff;border-top:6px solid transparent;border-bottom:6px solid transparent;margin-left:2px}
+.yt-stats-strip{display:flex;gap:0;margin-bottom:28px;border:1px solid var(--hairline);border-radius:var(--radius);overflow:hidden}
+.yt-stat{flex:1;padding:16px 20px;text-align:center;border-right:1px solid var(--hairline)}
+.yt-stat:last-child{border-right:none}
+.yt-stat-num{display:block;font-family:var(--font-disp);font-size:24px;color:var(--accent-youtube);letter-spacing:.02em}
+.yt-stat-label{font-size:11px;color:var(--text-muted);font-weight:500;margin-top:2px;display:block}
+
+/* Sentiment per car */
+.sent-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px}
+.sent-card{background:var(--bg-panel);border:1px solid var(--hairline);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:18px}
+.sent-car{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;margin-bottom:14px;display:block}
+.sa{color:var(--ca)}
+.sb{color:var(--cb)}
+.sc{color:var(--cc)}
+.sent-row{margin-bottom:10px}
+.sent-row-head{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-bottom:5px}
+.sent-row-head span:first-child{color:var(--text-muted);font-weight:500}
+.sent-row-head span:last-child{font-family:var(--font-mono);font-size:11px;font-weight:600}
+.bar-track{width:100%;height:7px;background:var(--bg-panel-raised);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .6s ease}
+.bf-pos{background:var(--ok)}
+.bf-neu{background:var(--warn)}
+.bf-neg{background:var(--danger)}
+.sent-total{font-size:11px;color:var(--text-faint);margin-top:10px}
+
+/* Video cards */
+.vid-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:32px}
+.vid-card{background:var(--bg-panel);border:1px solid var(--hairline);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);transition:box-shadow .2s}
+.vid-card:hover{box-shadow:var(--shadow-md)}
+.vid-thumb{width:100%;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;position:relative}
+.vid-play{width:46px;height:46px;background:rgba(255,255,255,.92);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer}
+.vid-play::after{content:'';border-left:15px solid var(--accent-youtube);border-top:9px solid transparent;border-bottom:9px solid transparent;margin-left:3px}
+.vid-info{padding:12px 14px 14px}
+.vid-title{font-size:13px;font-weight:600;line-height:1.4;margin-bottom:6px;color:var(--text-primary)}
+.vid-meta{font-size:11px;color:var(--text-faint);display:flex;flex-wrap:wrap;gap:6px}
+.vid-channel{color:var(--text-muted);font-weight:600}
+.vid-views::before{content:'·';margin-right:6px}
+
+/* Comments */
+.comments-head{font-family:var(--font-disp);font-size:18px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-primary);margin-bottom:16px}
+.cmt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.cmt-col{display:flex;flex-direction:column;gap:8px}
+.cmt-col-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);padding-bottom:4px;border-bottom:2px solid var(--hairline);margin-bottom:4px}
+.cmt-item{background:var(--bg-panel);border:1px solid var(--hairline);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow-sm)}
+.cmt-top{display:flex;gap:8px;align-items:flex-start;margin-bottom:7px}
+.sent-tag{font-size:9px;font-weight:700;letter-spacing:.1em;padding:2px 7px;border-radius:var(--radius-pill);text-transform:uppercase;flex-shrink:0;margin-top:1px}
+.st-pos{background:rgba(28,122,77,.10);color:var(--ok)}
+.st-neu{background:rgba(183,121,30,.12);color:var(--warn)}
+.st-neg{background:rgba(193,68,58,.10);color:var(--danger)}
+.cmt-txt{font-size:12px;color:var(--text-muted);line-height:1.5;flex:1}
+.cmt-foot{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.cmt-topic{font-size:10px;font-weight:600;color:var(--text-faint)}
+.cmt-topic::before{content:'# '}
+.cmt-likes{font-size:10px;color:var(--text-faint);font-family:var(--font-mono)}
+.cmt-likes::before{content:'👍 '}
+
+/* BASE NOTE */
+.base-note{text-align:center;font-size:12px;color:var(--text-faint);padding:24px 0;border-top:1px solid var(--hairline);display:flex;justify-content:center;gap:16px;flex-wrap:wrap}
+
+/* RESPONSIVE */
+@media(max-width:720px){
+  .topnav{padding:0 16px;gap:12px}
+  .nav-cats{display:none}
+  main{padding:0 16px 60px}
+  .cars-row,.sent-grid,.vid-grid,.cmt-grid{grid-template-columns:1fr}
+  .radar-section{grid-template-columns:1fr;gap:28px}
+  #radarCanvas{max-width:100%}
+  .yt-stats-strip{flex-wrap:wrap}
+  .yt-stat{border-right:none;border-bottom:1px solid var(--hairline);flex:0 0 50%}
+  .yt-stat:last-child{border-bottom:none}
+}
+@media(max-width:960px)and (min-width:721px){
+  .sent-grid,.vid-grid{grid-template-columns:1fr 1fr}
+  .cmt-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="#" class="logo">versus</a>
+  <ul class="nav-cats">
+    <li><a href="#">Carros</a></li>
+    <li><a href="#">Motos</a></li>
+    <li><a href="#">Elétricos</a></li>
+  </ul>
+  <div class="nav-end">
+    <button class="search-pill">⌕&nbsp;&nbsp;Buscar modelos e comparações</button>
+  </div>
+</nav>
+
+<main>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="decided-badge">Decidido</div>
+  <div class="cars-row">
+
+    <!-- Nexora Apex -->
+    <article class="car-card ca-card">
+      <div class="car-name">Nexora Apex</div>
+      <div class="car-tagline">SEDÃ ESPORTIVO · V6 BITURBO</div>
+      <div class="car-viz">
+        <svg viewBox="0 0 200 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="100" cy="82" rx="84" ry="4" fill="rgba(0,0,0,.06)"/>
+          <path d="M8,67 L14,54 L24,42 Q36,27 62,23 Q82,19 96,19 Q108,16 124,17 Q142,17 156,23 L170,36 L180,51 L182,66 Z" fill="#00095b"/>
+          <path d="M40,42 Q54,27 76,22 Q94,19 110,19 Q124,17 142,19 Q154,21 164,32 L160,43 L44,43 Z" fill="#b4c8e8" opacity=".3"/>
+          <path d="M52,37 Q64,28 80,24 Q96,21 108,21 L122,21 L114,32 L58,37 Z" fill="white" opacity=".1"/>
+          <rect x="174" y="43" width="9" height="6" rx="2.5" fill="#ffe566" opacity=".9"/>
+          <rect x="6" y="53" width="6" height="9" rx="2" fill="#ee1a1a" opacity=".7"/>
+          <rect x="9" y="62" width="7" height="4" rx="2" fill="#556"/>
+          <circle cx="50" cy="70" r="16" fill="#090c1e"/><circle cx="50" cy="70" r="10" fill="#283570"/><circle cx="50" cy="70" r="6" fill="#090c1e"/><circle cx="50" cy="70" r="2.5" fill="#5070c0"/>
+          <circle cx="152" cy="70" r="16" fill="#090c1e"/><circle cx="152" cy="70" r="10" fill="#283570"/><circle cx="152" cy="70" r="6" fill="#090c1e"/><circle cx="152" cy="70" r="2.5" fill="#5070c0"/>
+        </svg>
+      </div>
+      <div class="score-wrap">
+        <svg width="62" height="62" viewBox="0 0 62 62">
+          <circle cx="31" cy="31" r="27" fill="none" class="ring-track" stroke-width="5"/>
+          <circle cx="31" cy="31" r="27" fill="none" class="ring-val" stroke-width="5" stroke-dasharray="159.5 10.2" stroke-linecap="round"/>
+        </svg>
+        <div class="score-num">94</div>
+      </div>
+      <a href="#" class="buy-link">a partir de&nbsp;<span class="price-em">R$ 289.000</span></a>
+    </article>
+
+    <!-- Voltera EV9 -->
+    <article class="car-card cb-card">
+      <div class="car-name">Voltera EV9</div>
+      <div class="car-tagline">SUV ELÉTRICO · 450 CV · AWD</div>
+      <div class="car-viz">
+        <svg viewBox="0 0 200 95" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="100" cy="89" rx="84" ry="4" fill="rgba(0,0,0,.06)"/>
+          <path d="M8,73 L14,59 L22,46 L34,30 Q46,18 68,16 Q88,12 100,12 Q116,12 138,16 Q162,22 172,34 L180,48 L184,62 L186,73 Z" fill="#0f6e6e"/>
+          <path d="M36,44 Q50,22 72,18 Q90,14 100,14 Q124,14 146,18 Q164,22 170,36 L166,48 L40,48 Z" fill="#7ee0e0" opacity=".22"/>
+          <path d="M52,40 Q64,26 80,20 Q98,16 112,16 L132,18 L122,32 L58,38 Z" fill="white" opacity=".08"/>
+          <rect x="178" y="28" width="4" height="5" rx="1.5" fill="#7fe0e0" opacity=".9"/>
+          <rect x="176" y="45" width="10" height="5" rx="2.5" fill="#a0f0f0" opacity=".9"/>
+          <rect x="6" y="52" width="7" height="11" rx="2" fill="#ee1a1a" opacity=".65"/>
+          <circle cx="52" cy="77" r="18" fill="#062020"/><circle cx="52" cy="77" r="12" fill="#145050"/><circle cx="52" cy="77" r="7" fill="#062020"/><circle cx="52" cy="77" r="3" fill="#2a8080"/>
+          <circle cx="154" cy="77" r="18" fill="#062020"/><circle cx="154" cy="77" r="12" fill="#145050"/><circle cx="154" cy="77" r="7" fill="#062020"/><circle cx="154" cy="77" r="3" fill="#2a8080"/>
+        </svg>
+      </div>
+      <div class="score-wrap">
+        <svg width="62" height="62" viewBox="0 0 62 62">
+          <circle cx="31" cy="31" r="27" fill="none" class="ring-track" stroke-width="5"/>
+          <circle cx="31" cy="31" r="27" fill="none" class="ring-val" stroke-width="5" stroke-dasharray="151 18.7" stroke-linecap="round"/>
+        </svg>
+        <div class="score-num">89</div>
+      </div>
+      <a href="#" class="buy-link">a partir de&nbsp;<span class="price-em">R$ 349.000</span></a>
+    </article>
+
+    <!-- Taurus Raptor X -->
+    <article class="car-card cc-card">
+      <div class="car-name">Taurus Raptor X</div>
+      <div class="car-tagline">SUV PERFORMANCE · V8 5.0 N/A</div>
+      <div class="car-viz">
+        <svg viewBox="0 0 200 95" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="100" cy="89" rx="88" ry="5" fill="rgba(0,0,0,.06)"/>
+          <path d="M6,73 L12,57 L22,44 L36,30 Q50,17 76,15 Q94,11 100,11 Q112,11 140,15 Q166,20 176,33 L184,47 L188,62 L190,73 Z" fill="#c1443a"/>
+          <path d="M42,44 Q56,21 80,17 Q94,13 100,13 Q120,13 144,17 Q164,21 172,36 L168,48 L48,48 Z" fill="#f8c0b8" opacity=".22"/>
+          <path d="M58,40 Q70,25 86,18 Q100,14 112,14 L136,16 L126,32 L64,38 Z" fill="white" opacity=".09"/>
+          <path d="M184,60 L190,54 L190,73 L184,73 Z" fill="#8a1a1a"/>
+          <path d="M6,60 L10,54 L10,73 L6,73 Z" fill="#8a1a1a"/>
+          <path d="M178,42 L188,46 L188,53 L178,51 Z" fill="#ffe566" opacity=".9"/>
+          <rect x="4" y="50" width="7" height="13" rx="2" fill="#ee0a0a" opacity=".75"/>
+          <rect x="8" y="68" width="22" height="5" rx="2.5" fill="#6a1212"/>
+          <circle cx="56" cy="77" r="20" fill="#1a0808"/><circle cx="56" cy="77" r="13" fill="#6a2020"/><circle cx="56" cy="77" r="8" fill="#1a0808"/><circle cx="56" cy="77" r="3.5" fill="#9a3030"/>
+          <circle cx="158" cy="77" r="20" fill="#1a0808"/><circle cx="158" cy="77" r="13" fill="#6a2020"/><circle cx="158" cy="77" r="8" fill="#1a0808"/><circle cx="158" cy="77" r="3.5" fill="#9a3030"/>
+        </svg>
+      </div>
+      <div class="score-wrap">
+        <svg width="62" height="62" viewBox="0 0 62 62">
+          <circle cx="31" cy="31" r="27" fill="none" class="ring-track" stroke-width="5"/>
+          <circle cx="31" cy="31" r="27" fill="none" class="ring-val" stroke-width="5" stroke-dasharray="128.9 40.7" stroke-linecap="round"/>
+        </svg>
+        <div class="score-num">76</div>
+      </div>
+      <a href="#" class="buy-link">a partir de&nbsp;<span class="price-em">R$ 420.000</span></a>
+    </article>
+
+  </div>
+</section>
+
+<!-- VERDICT -->
+<div class="verdict">
+  <div class="verdict-eye">O Veredito</div>
+  <p class="verdict-txt">Escolha o <strong>Nexora Apex</strong> — lidera em 3 de 7 categorias.</p>
+</div>
+
+<!-- RADAR + DIFF TABLE -->
+<section class="radar-section">
+  <div>
+    <h2 class="sec-head">Quem Vence Onde</h2>
+    <p class="sec-sub">Clique numa categoria para ver detalhes</p>
+    <div class="legend">
+      <span class="leg-item"><span class="dot" style="background:var(--ca)"></span>Nexora Apex</span>
+      <span class="leg-item"><span class="dot" style="background:var(--cb)"></span>Voltera EV9</span>
+      <span class="leg-item"><span class="dot" style="background:var(--cc)"></span>Taurus Raptor X</span>
+    </div>
+    <canvas id="radarCanvas" width="720" height="720"></canvas>
+  </div>
+  <div>
+    <h3 class="diff-head">Maiores Diferenças</h3>
+    <table class="dtbl">
+      <thead>
+        <tr>
+          <th>Critério</th>
+          <th class="la">Nexora Apex</th>
+          <th class="lb">Voltera EV9</th>
+          <th class="lc">Taurus Raptor X</th>
+          <th>Vantagem</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>0–100 km/h</td><td>4,2 s</td><td class="hi">3,8 s</td><td>4,8 s</td><td class="adv">+21% Voltera</td></tr>
+        <tr><td>Porta-malas</td><td>380 L</td><td>520 L</td><td class="hi">650 L</td><td class="adv">+71% Taurus</td></tr>
+        <tr><td>Tela infotainment</td><td>10"</td><td class="hi">15,6"</td><td>12"</td><td class="adv">+56% Voltera</td></tr>
+        <tr><td>Consumo médio</td><td>9,0 L/100</td><td class="hi">0 (EV)</td><td>14,4 L/100</td><td class="adv">∞ Voltera</td></tr>
+        <tr><td>Potência</td><td>380 cv</td><td class="hi">450 cv</td><td class="hi">450 cv</td><td class="adv">+18%</td></tr>
+      </tbody>
+    </table>
+    <a href="#specs" class="more-link">Todas as 148 especificações na ficha ↓</a>
+  </div>
+</section>
+
+<!-- SPECS ACCORDION -->
+<section class="specs-section" id="specs">
+  <h2 class="sec-head">A Ficha Completa</h2>
+  <p class="sec-sub">148 especificações técnicas, agrupadas por categoria.</p>
+
+  <!-- 1. Performance -->
+  <div class="spec-block open">
+    <button class="spec-toggle" onclick="toggleBlock(this)">
+      <span class="cat-name">1. Performance</span>
+      <span class="spec-right"><span class="win-chip wa">Nexora Apex</span><span class="chev">▾</span></span>
+    </button>
+    <div class="spec-body">
+      <table class="stbl">
+        <thead><tr><th>Critério</th><th class="la">Nexora Apex</th><th class="lb">Voltera EV9</th><th class="lc">Taurus Raptor X</th></tr></thead>
+        <tbody>
+          <tr><td>Motorização</td><td class="wv">V6 3.0 Biturbo</td><td>Elétrico Dual</td><td>V8 5.0 N/A</td></tr>
+          <tr><td>Potência máxima</td><td>380 cv @ 6.200 rpm</td><td class="wv">450 cv / 330 kW</td><td class="wv">450 cv @ 7.000 rpm</td></tr>
+          <tr><td>Torque máximo</td><td>520 Nm @ 2.200 rpm</td><td class="wv">700 Nm</td><td>580 Nm @ 4.500 rpm</td></tr>
+          <tr><td>0–100 km/h</td><td>4,2 s</td><td class="wv">3,8 s</td><td>4,8 s</td></tr>
+          <tr><td>Velocidade máxima</td><td class="wv">285 km/h</td><td>250 km/h (lim.)</td><td>270 km/h</td></tr>
+          <tr><td>Transmissão</td><td>8 marchas auto</td><td>Direto (1 vel.)</td><td class="wv">10 marchas auto</td></tr>
+          <tr><td>Tração</td><td>RWD</td><td class="wv">AWD</td><td class="wv">AWD</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 2. Eficiência -->
+  <div class="spec-block">
+    <button class="spec-toggle" onclick="toggleBlock(this)">
+      <span class="cat-name">2. Eficiência</span>
+      <span class="spec-right"><span class="win-chip wb">Voltera EV9</span><span class="chev">▾</span></span>
+    </button>
+    <div class="spec-body">
+      <table class="stbl">
+        <thead><tr><th>Critério</th><th class="la">Nexora Apex</th><th class="lb">Voltera EV9</th><th class="lc">Taurus Raptor X</th></tr></thead>
+        <tbody>
+          <tr><td>Autonomia / tanque</td><td>650 km (60 L)</td><td class="wv">620 km WLTP</td><td>490 km (70 L)</td></tr>
+          <tr><td>Consumo cidade</td><td>10,2 L/100km</td><td class="wv">0 (EV)</td><td>16,5 L/100km</td></tr>
+          <tr><td>Consumo estrada</td><td>7,8 L/100km</td><td class="wv">0 (EV)</td><td>12,2 L/100km</td></tr>
+          <tr><td>Carga rápida (DC)</td><td><span class="ico-n">—</span></td><td class="wv">150 kW (0–80% em 22 min)</td><td><span class="ico-n">—</span></td></tr>
+          <tr><td>Carga AC</td><td><span class="ico-n">—</span></td><td class="wv">22 kW</td><td><span class="ico-n">—</span></td></tr>
+          <tr><td>Emissão CO₂</td><td>206 g/km</td><td class="wv">0 g/km</td><td>331 g/km</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 3. Tecnologia -->
+  <div class="spec-block">
+    <button class="spec-toggle" onclick="toggleBlock(this)">
+      <span class="cat-name">3. Tecnologia &amp; Conectividade</span>
+      <span class="spec-right"><span class="win-chip wb">Voltera EV9</span><span class="chev">▾</span></span>
+    </button>
+    <div class="spec-body">
+      <table class="stbl">
+        <thead><tr><th>Critério</th><th class="la">Nexora Apex</th><th class="lb">Voltera EV9</th><th class="lc">Taurus Raptor X</th></tr></thead>
+        <tbody>
+          <tr><td>Tela central</td><td>10" HD</td><td class="wv">15,6" 4K rotatória</td><td>12" FHD</td></tr>
+          <tr><td>RAM infotainment</td><td>4 GB</td><td class="wv">12 GB</td><td>8 GB</td></tr>
+          <tr><td>Painel digital</td><td>12,3"</td><td class="wv">12,8" OLED</td><td>12"</td></tr>
+          <tr><td>Head-up display</td><td><span class="ico-y">✓</span></td><td class="wv"><span class="ico-y">✓</span> AR</td><td><span class="ico-y">✓</span></td></tr>
+          <tr><td>Piloto automático nível</td><td>2</td><td class="wv">3</td><td>2</td></tr>
+          <tr><td>Câmeras 360°</td><td><span class="ico-y">✓</span></td><td class="wv"><span class="ico-y">✓</span> 4K</td><td><span class="ico-y">✓</span></td></tr>
+          <tr><td>Atualização OTA</td><td><span class="ico-n">✕</span></td><td class="wv"><span class="ico-y">✓</span></td><td><span class="ico-n">✕</span></td></tr>
+          <tr><td>Wi-Fi a bordo</td><td><span class="ico-y">✓</span></td><td class="wv"><span class="ico-y">✓</span> 5G</td><td><span class="ico-y">✓</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 4. Segurança -->
+  <div class="spec-block">
+    <button class="spec-toggle" onclick="toggleBlock(this)">
+      <span class="cat-name">4. Segurança</span>
+      <span class="spec-right"><span class="win-chip wb">Voltera EV9</span><span class="chev">▾</span></span>
+    </button>
+    <div class="spec-body">
+      <table class="stbl">
+        <thead><tr><th>Critério</th><th class="la">Nexora Apex</th><th class="lb">Voltera EV9</th><th class="lc">Taurus Raptor X</th></tr></thead>
+        <tbody>
+          <tr><td>Classificação Euro NCAP</td><td>5 ★</td><td class="wv">5 ★ (98 pts)</td><td>5 ★</td></tr>
+          <tr><td>Airbags</td><td>8</td><td class="wv">12</td><td>8</td></tr>
+          <tr><td>Frenagem autônoma</td><td><span class="ico-y">✓</span></td><td class="wv"><span class="ico-y">✓</span> avançado</td><td><span class="ico-y">✓</span></td></tr>
+          <tr><td>Monitoramento atenção</td><td><span class="ico-y">✓</span></td><td class="wv"><span class="ico-y">✓</span></td><td><span class="ico-n">✕</span></td></tr>
+          <tr><td>Alerta saída de faixa</td><td><span class="ico-y">✓</span></td><td class="wv"><span class="ico-y">✓</span></td><td><span class="ico-y">✓</span></td></tr>
+          <tr><td>Ponto cego radar</td><td><span class="ico-y">✓</span></td><td class="wv"><span class="ico-y">✓</span></td><td><span class="ico-n">✕</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 5. Conforto -->
+  <div class="spec-block">
+    <button class="spec-toggle" onclick="toggleBlock(this)">
+      <span class="cat-name">5. Conforto &amp; Espaço</span>
+      <span class="spec-right"><span class="win-chip wc">Taurus Raptor X</span><span class="chev">▾</span></span>
+    </button>
+    <div class="spec-body">
+      <table class="stbl">
+        <thead><tr><th>Critério</th><th class="la">Nexora Apex</th><th class="lb">Voltera EV9</th><th class="lc">Taurus Raptor X</th></tr></thead>
+        <tbody>
+          <tr><td>Lugares</td><td>5</td><td>5</td><td class="wv">7</td></tr>
+          <tr><td>Porta-malas</td><td>380 L</td><td>520 L</td><td class="wv">650 L</td></tr>
+          <tr><td>Frunk (porta-malas dianteiro)</td><td><span class="ico-n">—</span></td><td class="wv">82 L</td><td><span class="ico-n">—</span></td></tr>
+          <tr><td>Bancos ventilados</td><td><span class="ico-y">✓</span></td><td class="wv"><span class="ico-y">✓</span></td><td class="wv"><span class="ico-y">✓</span></td></tr>
+          <tr><td>Bancos massageadores</td><td><span class="ico-n">✕</span></td><td class="wv"><span class="ico-y">✓</span></td><td class="wv"><span class="ico-y">✓</span></td></tr>
+          <tr><td>Teto solar panorâmico</td><td><span class="ico-y">✓</span></td><td class="wv"><span class="ico-y">✓</span> full</td><td><span class="ico-y">✓</span></td></tr>
+          <tr><td>Som premium</td><td>Bose 12 falantes</td><td class="wv">Meridian 22 falantes</td><td>JBL 14 falantes</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 6. Design -->
+  <div class="spec-block">
+    <button class="spec-toggle" onclick="toggleBlock(this)">
+      <span class="cat-name">6. Design &amp; Dimensões</span>
+      <span class="spec-right"><span class="win-chip wa">Nexora Apex</span><span class="chev">▾</span></span>
+    </button>
+    <div class="spec-body">
+      <table class="stbl">
+        <thead><tr><th>Critério</th><th class="la">Nexora Apex</th><th class="lb">Voltera EV9</th><th class="lc">Taurus Raptor X</th></tr></thead>
+        <tbody>
+          <tr><td>Comprimento</td><td class="wv">4.820 mm</td><td>4.950 mm</td><td>4.990 mm</td></tr>
+          <tr><td>Largura</td><td>1.892 mm</td><td class="wv">1.930 mm</td><td>1.960 mm</td></tr>
+          <tr><td>Altura</td><td class="wv">1.408 mm</td><td>1.640 mm</td><td>1.720 mm</td></tr>
+          <tr><td>Peso</td><td class="wv">1.680 kg</td><td>2.340 kg</td><td>1.980 kg</td></tr>
+          <tr><td>Coeficiente arrasto (Cd)</td><td class="wv">0,25</td><td>0,23</td><td>0,34</td></tr>
+          <tr><td>Rodas</td><td>20"</td><td class="wv">22"</td><td class="wv">22" off-road</td></tr>
+          <tr><td>Faróis adaptativos</td><td class="wv"><span class="ico-y">✓</span> laser</td><td class="wv"><span class="ico-y">✓</span></td><td><span class="ico-y">✓</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 7. Custo-benefício -->
+  <div class="spec-block">
+    <button class="spec-toggle" onclick="toggleBlock(this)">
+      <span class="cat-name">7. Custo-benefício</span>
+      <span class="spec-right"><span class="win-chip wa">Nexora Apex</span><span class="chev">▾</span></span>
+    </button>
+    <div class="spec-body">
+      <table class="stbl">
+        <thead><tr><th>Critério</th><th class="la">Nexora Apex</th><th class="lb">Voltera EV9</th><th class="lc">Taurus Raptor X</th></tr></thead>
+        <tbody>
+          <tr><td>Preço base</td><td class="wv">R$ 289.000</td><td>R$ 349.000</td><td>R$ 420.000</td></tr>
+          <tr><td>Garantia motor/bateria</td><td>5 anos</td><td class="wv">8 anos / 160.000 km</td><td>5 anos</td></tr>
+          <tr><td>Custo por km (combustível)</td><td class="wv">R$ 0,54</td><td class="wv">R$ 0,14 (elétrico)</td><td>R$ 0,87</td></tr>
+          <tr><td>Revisão a cada</td><td>15.000 km</td><td class="wv">Sem revisão periódica</td><td>10.000 km</td></tr>
+          <tr><td>IPVA (estimado)</td><td class="wv">R$ 8.670</td><td>Isento (alguns estados)</td><td>R$ 12.600</td></tr>
+          <tr><td>Seguro médio anual</td><td class="wv">R$ 14.200</td><td>R$ 18.400</td><td>R$ 22.100</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- YOUTUBE REVIEWS -->
+<section class="yt-section" id="yt">
+  <div class="yt-head-row">
+    <div class="yt-pill"></div>
+    <h2 class="sec-head" style="margin-bottom:0">Reviews no YouTube</h2>
+  </div>
+  <p class="sec-sub">Análise de sentimentos processada com IA em comentários de 47 vídeos</p>
+
+  <div class="yt-stats-strip">
+    <div class="yt-stat"><span class="yt-stat-num">14.832</span><span class="yt-stat-label">Comentários analisados</span></div>
+    <div class="yt-stat"><span class="yt-stat-num">47</span><span class="yt-stat-label">Vídeos rastreados</span></div>
+    <div class="yt-stat"><span class="yt-stat-num">8,4M</span><span class="yt-stat-label">Visualizações totais</span></div>
+    <div class="yt-stat"><span class="yt-stat-num">63%</span><span class="yt-stat-label">Média positiva geral</span></div>
+  </div>
+
+  <!-- Sentiment per car -->
+  <div class="sent-grid">
+    <div class="sent-card">
+      <span class="sent-car sa">Nexora Apex</span>
+      <div class="sent-row">
+        <div class="sent-row-head"><span>Positivo</span><span style="color:var(--ok)">71%</span></div>
+        <div class="bar-track"><div class="bar-fill bf-pos" style="width:71%"></div></div>
+      </div>
+      <div class="sent-row">
+        <div class="sent-row-head"><span>Neutro</span><span style="color:var(--warn)">19%</span></div>
+        <div class="bar-track"><div class="bar-fill bf-neu" style="width:19%"></div></div>
+      </div>
+      <div class="sent-row">
+        <div class="sent-row-head"><span>Negativo</span><span style="color:var(--danger)">10%</span></div>
+        <div class="bar-track"><div class="bar-fill bf-neg" style="width:10%"></div></div>
+      </div>
+      <div class="sent-total">Base: 5.214 comentários · Tópico dominante: Dirigibilidade</div>
+    </div>
+    <div class="sent-card">
+      <span class="sent-car sb">Voltera EV9</span>
+      <div class="sent-row">
+        <div class="sent-row-head"><span>Positivo</span><span style="color:var(--ok)">68%</span></div>
+        <div class="bar-track"><div class="bar-fill bf-pos" style="width:68%"></div></div>
+      </div>
+      <div class="sent-row">
+        <div class="sent-row-head"><span>Neutro</span><span style="color:var(--warn)">24%</span></div>
+        <div class="bar-track"><div class="bar-fill bf-neu" style="width:24%"></div></div>
+      </div>
+      <div class="sent-row">
+        <div class="sent-row-head"><span>Negativo</span><span style="color:var(--danger)">8%</span></div>
+        <div class="bar-track"><div class="bar-fill bf-neg" style="width:8%"></div></div>
+      </div>
+      <div class="sent-total">Base: 6.090 comentários · Tópico dominante: Autonomia</div>
+    </div>
+    <div class="sent-card">
+      <span class="sent-car sc">Taurus Raptor X</span>
+      <div class="sent-row">
+        <div class="sent-row-head"><span>Positivo</span><span style="color:var(--ok)">52%</span></div>
+        <div class="bar-track"><div class="bar-fill bf-pos" style="width:52%"></div></div>
+      </div>
+      <div class="sent-row">
+        <div class="sent-row-head"><span>Neutro</span><span style="color:var(--warn)">26%</span></div>
+        <div class="bar-track"><div class="bar-fill bf-neu" style="width:26%"></div></div>
+      </div>
+      <div class="sent-row">
+        <div class="sent-row-head"><span>Negativo</span><span style="color:var(--danger)">22%</span></div>
+        <div class="bar-track"><div class="bar-fill bf-neg" style="width:22%"></div></div>
+      </div>
+      <div class="sent-total">Base: 3.528 comentários · Tópico dominante: Consumo</div>
+    </div>
+  </div>
+
+  <!-- Video cards -->
+  <div class="vid-grid">
+    <div class="vid-card">
+      <div class="vid-thumb" style="background:linear-gradient(135deg,#00095b 0%,#0f6e6e 100%)">
+        <div class="vid-play"></div>
+      </div>
+      <div class="vid-info">
+        <div class="vid-title">Nexora Apex vs Voltera EV9: Dois conceitos, um vencedor</div>
+        <div class="vid-meta">
+          <span class="vid-channel">AutoTeste BR</span>
+          <span class="vid-views">2,4M visualizações</span>
+          <span>1.210 comentários analisados</span>
+        </div>
+      </div>
+    </div>
+    <div class="vid-card">
+      <div class="vid-thumb" style="background:linear-gradient(135deg,#8a1a1a 0%,#c1443a 100%)">
+        <div class="vid-play"></div>
+      </div>
+      <div class="vid-info">
+        <div class="vid-title">Taurus Raptor X 2025: Vale os R$ 420 mil? Test drive completo</div>
+        <div class="vid-meta">
+          <span class="vid-channel">VeloCity Brasil</span>
+          <span class="vid-views">980K visualizações</span>
+          <span>890 comentários analisados</span>
+        </div>
+      </div>
+    </div>
+    <div class="vid-card">
+      <div class="vid-thumb" style="background:linear-gradient(135deg,#1a2040 0%,#3a4060 100%)">
+        <div class="vid-play"></div>
+      </div>
+      <div class="vid-info">
+        <div class="vid-title">Os 3 carros mais falados de 2025 em pista, cidade e estrada</div>
+        <div class="vid-meta">
+          <span class="vid-channel">Aceleração Zero</span>
+          <span class="vid-views">1,8M visualizações</span>
+          <span>2.100 comentários analisados</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comments -->
+  <h3 class="comments-head">Comentários em Destaque</h3>
+  <div class="cmt-grid">
+    <div class="cmt-col">
+      <div class="cmt-col-label" style="color:var(--ca);border-color:var(--ca)">Nexora Apex</div>
+      <div class="cmt-item">
+        <div class="cmt-top"><span class="sent-tag st-pos">Positivo</span><p class="cmt-txt">Dirigi no test drive e é incrível. A resposta do volante é perfeita, nunca senti algo assim nessa faixa de preço.</p></div>
+        <div class="cmt-foot"><span class="cmt-topic">Dirigibilidade</span><span class="cmt-likes">847</span></div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-top"><span class="sent-tag st-neg">Negativo</span><p class="cmt-txt">Para R$ 289 mil, esperava uma central maior. O sistema de infotainment ficou defasado frente à concorrência.</p></div>
+        <div class="cmt-foot"><span class="cmt-topic">Tecnologia</span><span class="cmt-likes">312</span></div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-top"><span class="sent-tag st-neu">Neutro</span><p class="cmt-txt">É um carro muito bom, mas o consumo de 10 L/100km na cidade me preocupa para uso diário na Grande SP.</p></div>
+        <div class="cmt-foot"><span class="cmt-topic">Eficiência</span><span class="cmt-likes">203</span></div>
+      </div>
+    </div>
+    <div class="cmt-col">
+      <div class="cmt-col-label" style="color:var(--cb);border-color:var(--cb)">Voltera EV9</div>
+      <div class="cmt-item">
+        <div class="cmt-top"><span class="sent-tag st-pos">Positivo</span><p class="cmt-txt">Fiz SP–Campinas–SP sem recarregar. Com o carregador rápido em Campinas foi fácil. Carro revolucionário.</p></div>
+        <div class="cmt-foot"><span class="cmt-topic">Autonomia</span><span class="cmt-likes">1.248</span></div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-top"><span class="sent-tag st-pos">Positivo</span><p class="cmt-txt">O silêncio interno a 130 km/h na estrada é surreal. Viagem virou prazer. Nunca mais volto para combustão.</p></div>
+        <div class="cmt-foot"><span class="cmt-topic">Conforto</span><span class="cmt-likes">654</span></div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-top"><span class="sent-tag st-neg">Negativo</span><p class="cmt-txt">R$ 349 mil é inacessível demais. A proposta é linda mas a democratização do elétrico ainda vai demorar muito.</p></div>
+        <div class="cmt-foot"><span class="cmt-topic">Preço</span><span class="cmt-likes">431</span></div>
+      </div>
+    </div>
+    <div class="cmt-col">
+      <div class="cmt-col-label" style="color:var(--cc);border-color:var(--cc)">Taurus Raptor X</div>
+      <div class="cmt-item">
+        <div class="cmt-top"><span class="sent-tag st-pos">Positivo</span><p class="cmt-txt">7 lugares com esse desempenho é único no mercado. Para família grande que não abre mão de performance, é o único.</p></div>
+        <div class="cmt-foot"><span class="cmt-topic">Espaço</span><span class="cmt-likes">789</span></div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-top"><span class="sent-tag st-neg">Negativo</span><p class="cmt-txt">14,4 L/100km na cidade é absurdo em 2025. Não tem como defender esse consumo diante de um Voltera EV9.</p></div>
+        <div class="cmt-foot"><span class="cmt-topic">Consumo</span><span class="cmt-likes">934</span></div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-top"><span class="sent-tag st-neu">Neutro</span><p class="cmt-txt">Motor incrível, mas a tecnologia a bordo está desatualizada. Para o preço, a central de 12" decepciona.</p></div>
+        <div class="cmt-foot"><span class="cmt-topic">Tecnologia</span><span class="cmt-likes">267</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="base-note">
+  <span>Base: 32 critérios medidos</span>
+  <span>·</span>
+  <span>ponderados por 42.800 votos de leitores</span>
+  <span>·</span>
+  <a href="#" style="color:inherit;text-decoration:none">Como pontuamos →</a>
+</div>
+
+</main>
+
+<script>
+function toggleBlock(btn) {
+  btn.closest('.spec-block').classList.toggle('open');
+}
+
+document.fonts.ready.then(drawRadar);
+
+function drawRadar() {
+  var canvas = document.getElementById('radarCanvas');
+  if (!canvas) return;
+  var dpr = window.devicePixelRatio || 1;
+  var W = 360, H = 360;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  var cx = W/2, cy = H/2, maxR = 108;
+  var N = 7;
+  var cats = ['Performance','Tecnologia','Segurança','Conforto','Design','Eficiência','Custo'];
+  var products = [
+    { color: '#00095b', scores: [92,72,78,65,90,55,85] },
+    { color: '#0f6e6e', scores: [82,94,88,78,74,96,62] },
+    { color: '#c1443a', scores: [75,65,72,92,68,32,45] }
+  ];
+
+  function ang(i) { return -Math.PI/2 + (2*Math.PI/N)*i; }
+  function pt(i, r) { return [cx + r*Math.cos(ang(i)), cy + r*Math.sin(ang(i))]; }
+
+  var gridC = 'rgba(22,35,58,.07)';
+  var axisC = 'rgba(22,35,58,.1)';
+  var labelC = 'rgba(91,100,114,.85)';
+
+  [25,50,75,100].forEach(function(pct) {
+    ctx.beginPath();
+    for (var i=0; i<N; i++) {
+      var p = pt(i, maxR*pct/100);
+      i===0 ? ctx.moveTo(p[0],p[1]) : ctx.lineTo(p[0],p[1]);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = gridC; ctx.lineWidth = 1; ctx.stroke();
+  });
+
+  for (var i=0; i<N; i++) {
+    var p = pt(i, maxR);
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(p[0],p[1]);
+    ctx.strokeStyle = axisC; ctx.lineWidth = 1; ctx.stroke();
+  }
+
+  [2,1,0].forEach(function(pi) {
+    var prod = products[pi];
+    ctx.beginPath();
+    for (var i=0; i<N; i++) {
+      var p = pt(i, maxR*prod.scores[i]/100);
+      i===0 ? ctx.moveTo(p[0],p[1]) : ctx.lineTo(p[0],p[1]);
+    }
+    ctx.closePath();
+    ctx.fillStyle = prod.color + '1e';
+    ctx.fill();
+    ctx.strokeStyle = prod.color;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+  });
+
+  products.forEach(function(prod) {
+    for (var i=0; i<N; i++) {
+      var p = pt(i, maxR*prod.scores[i]/100);
+      ctx.beginPath(); ctx.arc(p[0],p[1],3.5,0,2*Math.PI);
+      ctx.fillStyle = prod.color; ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+  });
+
+  ctx.font = '600 10px "Poppins", sans-serif';
+  ctx.fillStyle = labelC;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  var labelR = maxR + 26;
+  for (var i=0; i<N; i++) {
+    var lp = pt(i, labelR);
+    ctx.fillText(cats[i].toUpperCase(), lp[0], lp[1]);
+  }
+}
+</script>
+</body>
+</html>

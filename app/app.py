@@ -58,9 +58,9 @@ def youtube():
     return render_template("youtube/index.html", **veiculo_selecionado())
 
 
-@app.route("/x")
-def x_search():
-    return render_template("x/index.html", **veiculo_selecionado())
+@app.route("/social")
+def social():
+    return render_template("social/index.html", **veiculo_selecionado())
 
 
 @app.route("/gov")
@@ -86,6 +86,14 @@ def analytics():
 @app.route("/compare")
 def compare():
     return render_template("compare/index.html", **veiculo_selecionado())
+
+
+@app.route("/conhecimento")
+def conhecimento():
+    """Base de Conhecimento — visualização do banco vetorial de grafos
+    (transcrições, PDFs, comentários); todo o dado é gerado no próprio
+    JavaScript da página."""
+    return render_template("conhecimento/index.html", **veiculo_selecionado())
 
 
 # ---------------------------------------------------------------------------
@@ -194,11 +202,6 @@ def api_proxy(caminho: str):
 # ---------------------------------------------------------------------------
 # Proxies POST restantes (stubs existentes — mantidos para compatibilidade)
 # ---------------------------------------------------------------------------
-
-@app.route("/x/executar", methods=["POST"])
-def x_executar():
-    return jsonify({"mencoes": []})
-
 
 @app.route("/compare/rodar", methods=["POST"])
 def compare_rodar():

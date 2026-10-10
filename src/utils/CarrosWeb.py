@@ -5,6 +5,7 @@ import re
 from bs4 import BeautifulSoup
 from curl_cffi import requests  # Usando a API direta que funcionou no teste simples
 
+from src.utils.deteccao_bloqueio import parece_bloqueado_ou_erro
 from src.utils.html_encoding import decodificar_html_bytes
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,17 @@ class CarrosWeb:
 
                 # Decodifica os bytes brutos: tenta UTF-8 primeiro, cai em cp1252
                 html = decodificar_html_bytes(resp.content)
+
+                # HTTP 200 na mesma URL (sem redirecionar pra erro.asp) mas com
+                # conteúdo de bloqueio/erro genérico — bug real já visto em
+                # produção, onde o site "respondia OK" mas não trazia o
+                # catálogo de verdade. Trata como falha e tenta de novo, igual
+                # ao branch de erro.asp acima.
+                if parece_bloqueado_ou_erro(html):
+                    print(f"[!] Página de bloqueio/erro disfarçada de HTTP 200. Tentativa {attempt}/{retries}. Aguardando...")
+                    await asyncio.sleep(2 ** attempt)
+                    continue
+
                 return BeautifulSoup(html, "html.parser")
 
             except Exception as e:
@@ -91,9 +103,16 @@ class CarrosWeb:
                         "id_busca": valor,
                         "nome_exibicao": nome
                     })
-                    
+
             return modelos
-        
+
+    def montar_url_modelo(self, fabricante: str, modelo: str) -> str:
+        """URL de catálogo (listagem de versões) pra um (fabricante, modelo)
+        — usada por specs_api.py em vez de montar a URL na mão, pra cada
+        fonte poder ter seu próprio esquema de URL (ver iCarros.py, que
+        usa um esquema totalmente diferente)."""
+        return f"{self.base_url}/catalogo.asp?fabricante={fabricante.title()}&varnome={modelo}"
+
     async def extrair_versoes(self, url: str) -> list[dict]:
             # O método _get já cuida de verificar o erro.asp internamente!
             soup = await self._get(url)

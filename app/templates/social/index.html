@@ -1,0 +1,231 @@
+{% extends "_layout/dashboard_base.html" %}
+
+{% block titulo %}Redes Sociais{% endblock %}
+{% block mode_accent %}--accent-x{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+<link rel="stylesheet" href="{{ url_for('static', filename='social/style.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page__header">
+  <div>
+    <h1 class="page__titulo">Redes Sociais</h1>
+    <p class="page__descricao">
+      Reúne o que estão publicando sobre a Ford no Reddit, X e Instagram e classifica o sentimento de
+      cada post com o mesmo LLM configurado no servidor (igual ao enriquecimento de comentários do YouTube).
+    </p>
+  </div>
+</div>
+
+<div data-aviso-social class="aviso aviso--erro" hidden></div>
+
+<div class="painel">
+  <div class="painel__cabecalho">
+    <div>
+      <h2 class="painel__titulo"><span class="material-icons painel__titulo-icone" aria-hidden="true">forum</span>Coleta &amp; Pipeline</h2>
+      <p class="painel__legenda">Busca posts sobre o termo informado e roda a pipeline (RAW → REFINED → Enriquecimento de IA → TRUST).</p>
+    </div>
+  </div>
+
+  <form class="form-social" data-form-social>
+    <div class="campo">
+      <label for="termo-busca-social">Termo de busca</label>
+      <input type="text" id="termo-busca-social" name="termo_busca" placeholder="ex.: Ford Territory">
+    </div>
+    <div class="campo campo--redes">
+      <label>Redes</label>
+      <div class="checkboxes-redes">
+        <label class="checkbox-rede"><input type="checkbox" name="redes" value="reddit" checked> Reddit</label>
+        <label class="checkbox-rede"><input type="checkbox" name="redes" value="x" checked> X</label>
+        <label class="checkbox-rede"><input type="checkbox" name="redes" value="instagram" checked> Instagram</label>
+      </div>
+    </div>
+    <div class="campo campo--quantidade">
+      <label for="quantidade-social">Quantidade</label>
+      <input type="number" id="quantidade-social" name="quantidade" value="40" min="5" max="200">
+    </div>
+    <button type="submit" class="btn btn--primario" data-botao-executar-social>
+      <span class="material-icons" aria-hidden="true" style="font-size:16px;vertical-align:-3px">play_arrow</span>
+      Executar agora
+    </button>
+  </form>
+
+  <div data-bloco-execucao hidden>
+    <ol class="trilho" data-trilho></ol>
+
+    <div class="abas abas--camadas" role="tablist">
+      <button type="button" class="aba is-ativa" data-camada="raw" role="tab">RAW</button>
+      <button type="button" class="aba" data-camada="refined" role="tab">REFINED</button>
+      <button type="button" class="aba" data-camada="trust" role="tab">TRUST</button>
+    </div>
+    <div data-painel-camada></div>
+  </div>
+</div>
+
+<div class="painel">
+  <div class="painel__cabecalho">
+    <div>
+      <h2 class="painel__titulo"><span class="material-icons painel__titulo-icone" aria-hidden="true">tune</span>Filtros</h2>
+      <p class="painel__legenda">Combine rede e sentimento para recortar as seções abaixo — reflete tudo que já foi coletado no warehouse, não só a última execução.</p>
+    </div>
+  </div>
+  <div class="filtro-barra">
+    <label class="filtro-item">
+      <span class="material-icons filtro-item__icone" aria-hidden="true">share</span>
+      <select data-filtro-rede>
+        <option value="">Todas as redes</option>
+      </select>
+    </label>
+    <label class="filtro-item">
+      <span class="material-icons filtro-item__icone" aria-hidden="true">mood</span>
+      <select data-filtro-sentimento>
+        <option value="">Todos os sentimentos</option>
+      </select>
+    </label>
+    <button type="button" class="btn btn--linha btn--pequeno" data-limpar-filtros-social>
+      <span class="material-icons filtro-limpar__icone" aria-hidden="true">clear</span>
+      Limpar
+    </button>
+  </div>
+</div>
+
+<div class="analytics-kpis">
+  <div class="analytics-kpi">
+    <span class="analytics-kpi__icone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M4 5.5h16a1 1 0 011 1V16a1 1 0 01-1 1H9l-4.5 3.5V17H4a1 1 0 01-1-1V6.5a1 1 0 011-1z" stroke-linejoin="round"/>
+      </svg>
+    </span>
+    <span>
+      <p class="analytics-kpi__valor" data-kpi-total>—</p>
+      <p class="analytics-kpi__rotulo">Posts analisados</p>
+    </span>
+  </div>
+  <div class="analytics-kpi">
+    <span class="analytics-kpi__icone analytics-kpi__icone--ok">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M4 18l5-5 4 3 7-8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M15 8h5v5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </span>
+    <span>
+      <p class="analytics-kpi__valor" data-kpi-positivo>—</p>
+      <p class="analytics-kpi__rotulo">Sentimento positivo</p>
+    </span>
+  </div>
+</div>
+
+<div class="analytics-graficos">
+  <div class="painel analytics-card-grafico">
+    <div class="analytics-card-grafico__cabecalho">
+      <p class="rotulo-secao">Distribuição por sentimento</p>
+      <span class="campo__ajuda">% de posts, por classificação da IA</span>
+    </div>
+    <div class="analytics-grafico-wrap"><canvas data-grafico-sentimento></canvas></div>
+  </div>
+  <div class="painel analytics-card-grafico">
+    <div class="analytics-card-grafico__cabecalho">
+      <p class="rotulo-secao">Posts por rede</p>
+      <span class="campo__ajuda">Reddit, X e Instagram</span>
+    </div>
+    <div class="analytics-grafico-wrap"><canvas data-grafico-rede></canvas></div>
+  </div>
+</div>
+
+<div class="painel">
+  <div class="comparativo-cabecalho">
+    <div>
+      <h2 class="painel__titulo"><span class="material-icons painel__titulo-icone" aria-hidden="true">leaderboard</span>Comparação de marcas</h2>
+      <p class="painel__legenda">Ford vs. a marca concorrente selecionada, a partir da classificação de sentimento dos posts.</p>
+    </div>
+    <label class="filtro-item">
+      <span class="material-icons filtro-item__icone" aria-hidden="true">directions_car</span>
+      <select data-comparativo-marca>
+        <option value="Chevrolet">Chevrolet</option>
+        <option value="Volkswagen">Volkswagen</option>
+        <option value="Toyota">Toyota</option>
+        <option value="Hyundai">Hyundai</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="comparativo-tiles">
+    <div class="comparativo-tile comparativo-tile--ford">
+      <p class="comparativo-tile__titulo">
+        <span class="comparativo-tile__cor"></span> Ford
+        <span class="selo--lidera" data-comparativo-selo-ford hidden>
+          <span class="material-icons" aria-hidden="true">military_tech</span> Líder
+        </span>
+      </p>
+      <div class="comparativo-tile__grid">
+        <div><p class="comparativo-tile__metrica">NPS</p><p class="comparativo-tile__valor" data-comparativo-ford-nps>—</p></div>
+        <div><p class="comparativo-tile__metrica">% positivo</p><p class="comparativo-tile__valor" data-comparativo-ford-positivo>—</p></div>
+        <div><p class="comparativo-tile__metrica">Engajamento médio</p><p class="comparativo-tile__valor" data-comparativo-ford-engajamento>—</p></div>
+        <div><p class="comparativo-tile__metrica">Menções</p><p class="comparativo-tile__valor" data-comparativo-ford-mencoes>—</p></div>
+      </div>
+    </div>
+    <div class="comparativo-tile comparativo-tile--concorrente">
+      <p class="comparativo-tile__titulo"><span class="comparativo-tile__cor"></span> <span data-comparativo-concorrente-nome>—</span></p>
+      <div class="comparativo-tile__grid">
+        <div><p class="comparativo-tile__metrica">NPS</p><p class="comparativo-tile__valor" data-comparativo-concorrente-nps>—</p></div>
+        <div><p class="comparativo-tile__metrica">% positivo</p><p class="comparativo-tile__valor" data-comparativo-concorrente-positivo>—</p></div>
+        <div><p class="comparativo-tile__metrica">Engajamento médio</p><p class="comparativo-tile__valor" data-comparativo-concorrente-engajamento>—</p></div>
+        <div><p class="comparativo-tile__metrica">Menções</p><p class="comparativo-tile__valor" data-comparativo-concorrente-mencoes>—</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="analytics-grafico-wrap"><canvas data-grafico-comparativo></canvas></div>
+</div>
+
+<div class="painel">
+  <div class="painel__cabecalho">
+    <div>
+      <h2 class="painel__titulo">Satisfação — NPS &amp; Likert</h2>
+      <p class="painel__legenda">
+        Índices aproximados a partir do sentimento classificado pela IA nos posts — mesmo mapeamento
+        usado no Dashboard do YouTube (positivo = promotor / nota 5, negativo = detrator / nota 1,
+        neutro e misto = passivo / nota 3).
+      </p>
+    </div>
+  </div>
+
+  <div class="stat-tiles">
+    <div class="stat-tile">
+      <p class="stat-tile__rotulo">NPS (posts filtrados)</p>
+      <p class="stat-tile__valor" data-stat-nps-valor>—</p>
+      <p class="stat-tile__legenda" data-stat-nps-legenda></p>
+    </div>
+    <div class="stat-tile">
+      <p class="stat-tile__rotulo">Likert médio (1–5)</p>
+      <p class="stat-tile__valor" data-stat-likert-valor>—</p>
+      <div class="likert-dist" data-likert-dist></div>
+    </div>
+  </div>
+</div>
+
+<div class="painel">
+  <div class="painel__cabecalho">
+    <div>
+      <h2 class="painel__titulo">Posts analisados</h2>
+      <p class="painel__legenda" data-resumo-tabela>Carregando…</p>
+    </div>
+    <div class="painel__acoes">
+      <button type="button" class="btn btn--linha btn--pequeno" data-pagina-anterior>Anterior</button>
+      <button type="button" class="btn btn--linha btn--pequeno" data-pagina-seguinte>Próxima</button>
+    </div>
+  </div>
+  <div data-tabela-posts>
+    <div class="vazio"><strong>Carregando…</strong></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.7/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='social/script.js') }}"></script>
+{% endblock %}

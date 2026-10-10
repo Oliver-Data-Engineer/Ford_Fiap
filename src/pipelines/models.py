@@ -52,6 +52,7 @@ class TipoStep(str, Enum):
     RAW = "raw"
     REFINED = "refined"
     COMMENT_ENRICHMENT = "comment_enrichment"
+    VIDEO_EXTRACTION = "video_extraction"
     AGENT = "agent"
     TRUST = "trust"
     OUTPUT = "output"

@@ -12,7 +12,10 @@
   var pagina = document.querySelector('[data-lista-sites]');
   if (!pagina) return;
 
-  var estado = { sites: [], config: [], timers: {}, modalEtapa: null, modalSite: null };
+  var estado = {
+    sites: [], config: [], timers: {}, modalEtapa: null, modalSite: null,
+    ultimosDados: {}  // { site_id: { objetivo: {marca, modelo, linhas} } } — alimenta o chat widget
+  };
   var INTERVALO_POLLING = 2000;
 
   // ── Utilidades ─────────────────────────────────────────────────────────
@@ -379,6 +382,7 @@
       '<select data-filtro-papel>' + PAPEIS_FILTRO.map(function (p) {
         return '<option value="' + p + '"' + (p === f.papel ? ' selected' : '') + '>' + p + '</option>';
       }).join('') + '</select>' +
+      '<button type="button" class="fluxo-etapa__acao" data-filtro-remover title="Remover filtro">×</button>' +
     '</div>';
   }
 
@@ -420,6 +424,16 @@
       '<div data-filtros-lista>' +
         (filtros.length ? filtros.map(linhaFiltro).join('') : '<div class="vazio vazio--compacto">Nenhum filtro detectado ainda.</div>') +
       '</div>' +
+      '<div class="scraper-filtro-add">' +
+        '<input type="text" data-filtro-manual-valor placeholder="valor exato na URL (ex.: ford)">' +
+        '<select data-filtro-manual-papel>' + PAPEIS_FILTRO.map(function (p) {
+          return '<option value="' + p + '">' + p + '</option>';
+        }).join('') + '</select>' +
+        '<button type="button" class="btn btn--linha btn--pequeno" data-add-filtro-manual>+ filtro</button>' +
+      '</div>' +
+      '<p class="campo__ajuda">Adicione um valor que aparece literalmente na URL de amostra (num parâmetro' +
+        ' ou num trecho do caminho, ex.: ".../busca/ford/2026") e o papel dele — "Salvar" recalcula o' +
+        ' template a partir da URL de amostra e dos filtros atuais.</p>' +
       '<p class="campo__ajuda" data-etapa-template>' + (etapa.url_template ? 'Template: ' + esc(etapa.url_template) : '') + '</p>' +
 
       '<div class="modal__acoes" style="justify-content:flex-start;gap:8px;margin-top:14px">' +
@@ -452,6 +466,9 @@
       : 'Etapa de navegação — encontra as linhas que levam à(s) próxima(s) página(s). Diga qual campo é a URL herdada pela etapa seguinte.';
 
     $('[data-modal-etapa-corpo]').innerHTML = corpoModalEtapa(etapa, ultima, objetivo);
+    if (etapa.validado_em) {
+      avisar($('[data-aviso-etapa]', $('[data-modal-etapa-corpo]')), 'Testada em ' + dataHora(etapa.validado_em) + '.', 'ok');
+    }
     $('[data-modal-etapa]').hidden = false;
   }
 
@@ -482,6 +499,61 @@
     if (!datalist) return;
     var nomes = $$('[data-campo-livre-nome]', corpo).map(function (i) { return i.value.trim(); }).filter(Boolean);
     datalist.innerHTML = nomes.map(function (n) { return '<option value="' + esc(n) + '">'; }).join('');
+  }
+
+  function adicionarFiltroManualModal(corpo) {
+    var valorInput = $('[data-filtro-manual-valor]', corpo);
+    var papelSelect = $('[data-filtro-manual-papel]', corpo);
+    var valor = valorInput.value.trim();
+    if (!valor) return;
+
+    var lista = $('[data-filtros-lista]', corpo);
+    var vazio = $('.vazio', lista);
+    if (vazio) vazio.remove();
+    lista.insertAdjacentHTML('beforeend', linhaFiltro({ nome_param: valor, valor_amostra: valor, papel: papelSelect.value }));
+
+    valorInput.value = '';
+    avisar($('[data-aviso-etapa]', corpo), 'Filtro adicionado — clique em "Salvar" pra gerar o template.', 'ok');
+  }
+
+  function coletarFiltrosModal(corpo) {
+    return $$('[data-filtro-linha]', corpo).map(function (linha) {
+      var monos = $$('.mono', linha);
+      var select = $('[data-filtro-papel]', linha);
+      return {
+        nome_param: monos[0] ? monos[0].textContent.trim() : '',
+        valor_amostra: monos[1] ? monos[1].textContent.trim() : '',
+        papel: select ? select.value : 'outro'
+      };
+    });
+  }
+
+  function salvarEtapaModal() {
+    var ctx = estado.modalEtapa;
+    if (!ctx) return;
+    var corpo = $('[data-modal-etapa-corpo]');
+    var botao = $('[data-salvar-modal-etapa]');
+    var aviso = $('[data-aviso-etapa]', corpo);
+
+    var url = $('[data-etapa-url]', corpo).value.trim();
+    var payload = { url_amostra: url, selectors: coletarSelectorsModal(), filtros: coletarFiltrosModal(corpo) };
+    if (!ctx.ultima) {
+      var herdado = $('[data-etapa-herdado]', corpo);
+      payload.campo_herdado = herdado ? herdado.value.trim() : '';
+    }
+
+    botao.disabled = true;
+    api('PUT', '/sites/' + ctx.siteId + '/objetivos/' + ctx.objetivo + '/etapas/' + ctx.ordem, payload)
+      .then(function () {
+        avisar(aviso, 'Configuração salva.', 'ok');
+        return carregarSites();
+      })
+      .catch(function (erro) {
+        avisar(aviso, mensagemErro(erro), 'erro');
+      })
+      .finally(function () {
+        botao.disabled = false;
+      });
   }
 
   function testarEtapaModal() {
@@ -642,6 +714,10 @@
 
       api('GET', ROTA_DADOS[o] + q).then(function (r) {
         wrap.innerHTML = montarTabela(r.linhas || [], COLUNA_CHAVE_POR_OBJETIVO[o]);
+        // Guarda o último resultado — alimenta o chat widget (ver final do
+        // arquivo), já que a resposta hoje só é jogada direto na tela.
+        estado.ultimosDados[id] = estado.ultimosDados[id] || {};
+        estado.ultimosDados[id][o] = { marca: marca, modelo: modelo, linhas: r.linhas || [] };
       }).catch(function (erro) {
         wrap.innerHTML = '<div class="vazio vazio--compacto">' + esc(mensagemErro(erro)) + '</div>';
       });
@@ -1089,6 +1165,8 @@
     estado.modalEtapa = null;
   });
 
+  $('[data-salvar-modal-etapa]').addEventListener('click', salvarEtapaModal);
+
   modalEtapa.addEventListener('click', function (evento) {
     if (evento.target === modalEtapa) {
       modalEtapa.hidden = true;
@@ -1107,6 +1185,14 @@
       atualizarDatalistCampos(modalEtapaCorpo);
       return;
     }
+    if (evento.target.closest('[data-filtro-remover]')) {
+      evento.target.closest('[data-filtro-linha]').remove();
+      if (!$('[data-filtro-linha]', modalEtapaCorpo)) {
+        $('[data-filtros-lista]', modalEtapaCorpo).innerHTML = '<div class="vazio vazio--compacto">Nenhum filtro detectado ainda.</div>';
+      }
+      return;
+    }
+    if (evento.target.closest('[data-add-filtro-manual]')) { adicionarFiltroManualModal(modalEtapaCorpo); return; }
     if (evento.target.closest('[data-btn-descobrir]')) { descobrirEtapaModal(); return; }
     if (evento.target.closest('[data-detectar-filtros]')) { detectarFiltrosModal(); return; }
     if (evento.target.closest('[data-btn-testar]')) { testarEtapaModal(); return; }
@@ -1123,4 +1209,30 @@
   carregarResumo();
   carregarSites();
   carregarConfig();
+
+  // ── Chat widget — contexto = últimos dados coletados vistos na tela ──────
+
+  if (window.registrarContextoChat) {
+    window.registrarContextoChat('Scraper Mode — dados coletados', function () {
+      var sitesComDados = Object.keys(estado.ultimosDados);
+      if (!sitesComDados.length) return null;
+      return sitesComDados.map(function (siteId) {
+        var porObjetivo = estado.ultimosDados[siteId];
+        var site = (estado.sites || []).filter(function (s) { return s.id === siteId; })[0];
+        return {
+          site: (site && site.name) || siteId,
+          dados: Object.keys(porObjetivo).map(function (objetivo) {
+            var d = porObjetivo[objetivo];
+            return {
+              objetivo: objetivo, marca: d.marca || null, modelo: d.modelo || null,
+              linhas: (d.linhas || []).slice(0, 30)
+            };
+          })
+        };
+      });
+    }, [
+      'Quais atributos de ficha técnica foram coletados?',
+      'Resuma os comentários coletados deste site.'
+    ]);
+  }
 })();

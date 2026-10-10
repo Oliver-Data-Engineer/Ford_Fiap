@@ -161,11 +161,13 @@ class Settings:
 
     @property
     def llm_provider_padrao(self) -> str:
-        return os.getenv("LLM_PROVIDER", "groq")
+        # `or` (não um 2º argumento de getenv) — uma linha `LLM_PROVIDER=`
+        # em branco no .env também deve cair no padrão, não virar "".
+        return os.getenv("LLM_PROVIDER") or "gemini"
 
     @property
     def llm_model_padrao(self) -> str:
-        return os.getenv("LLM_MODEL", "openai/gpt-oss-20b")
+        return os.getenv("LLM_MODEL") or "gemini-3.5-flash-lite"
 
     def llm_api_key(self, provider: str) -> str | None:
         """Chave do provider informado, lida da variável de ambiente própria."""
@@ -228,6 +230,28 @@ class Settings:
             return False
 
         return True
+
+    # ── Dashboard analítico — dados reais vs. ilustrativos ──────────────────
+
+    @property
+    def dashboard_dados_reais(self) -> bool:
+        """
+        Por padrão (False) o Dashboard (`/analytics`) preenche KPIs, gráficos,
+        filtros e a comparação de marcas com um conjunto fixo de dados
+        ilustrativos — funciona sem BigQuery configurado, pensado pra
+        demonstração. Só passa a consultar o warehouse de verdade quando esta
+        flag é explicitamente ligada.
+        """
+        return os.getenv("DASHBOARD_REAL", "false").strip().lower() in ("true", "1")
+
+    # ── Redes Sociais (Reddit/X/Instagram — dados sintéticos + IA real) ─────
+
+    @property
+    def social_bigquery_dataset(self) -> str:
+        """Dataset onde os posts sintéticos de redes sociais e sua análise de
+        IA são gravados — separado dos demais (domínio de dado próprio, mesmo
+        projeto GCP)."""
+        return os.getenv("SOCIAL_BIGQUERY_DATASET", "social_ford")
 
     # ── Gov Mode (catálogo FIPE — mesmo projeto GCP, dataset separado) ──────
 

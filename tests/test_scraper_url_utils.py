@@ -59,6 +59,34 @@ def principal() -> int:
     template_sem_filtro = montar_template(url, [])
     checar(template_sem_filtro == url, "sem filtros classificados, o template é idêntico à URL original")
 
+    print("\n=== 3. montar_template — filtro manual por segmento do path (sem query) ===")
+
+    url_path = "https://napista.com.br/busca/ford/2026?pn=1"
+    filtros_path = [
+        FiltroParam(nome_param="ford", papel="marca", valor_amostra="ford"),
+        FiltroParam(nome_param="2026", papel="ano", valor_amostra="2026"),
+    ]
+    template_path = montar_template(url_path, filtros_path)
+    checar(template_path == "https://napista.com.br/busca/{marca}/{ano}?pn=1",
+           f"filtro sem chave de query vira um segmento do path (obtido: {template_path!r})")
+    checar(template_path.format(marca="nissan", ano="2026") ==
+           "https://napista.com.br/busca/nissan/2026?pn=1",
+           "template por path é um .format() válido, gera a URL de outra marca")
+
+    filtros_mistos = [
+        FiltroParam(nome_param="ford", papel="marca", valor_amostra="ford"),
+        FiltroParam(nome_param="pn", papel="pagina", valor_amostra="1"),
+    ]
+    template_misto = montar_template(url_path, filtros_mistos)
+    checar(template_misto == "https://napista.com.br/busca/{marca}/2026?pn={pagina}",
+           f"path e query combinados no mesmo template (obtido: {template_misto!r})")
+
+    template_nao_encontrado = montar_template(url_path, [
+        FiltroParam(nome_param="chevrolet", papel="marca", valor_amostra="chevrolet"),
+    ])
+    checar(template_nao_encontrado == url_path,
+           "valor que não aparece nem na query nem em nenhum segmento do path é ignorado, sem erro")
+
     print("\n" + "=" * 62)
     if falhas:
         print(f"{len(falhas)} VERIFICAÇÃO(ÕES) FALHARAM:")

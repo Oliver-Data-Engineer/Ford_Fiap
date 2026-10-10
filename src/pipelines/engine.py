@@ -58,6 +58,7 @@ STEPS_PADRAO: list[TipoStep] = [
     TipoStep.RAW,
     TipoStep.REFINED,
     TipoStep.COMMENT_ENRICHMENT,
+    TipoStep.VIDEO_EXTRACTION,
     TipoStep.TRUST,
 ]
 
@@ -69,6 +70,7 @@ ROTULOS: dict[TipoStep, str] = {
     TipoStep.RAW: "RAW",
     TipoStep.REFINED: "REFINED",
     TipoStep.COMMENT_ENRICHMENT: "Enriquecimento de comentários",
+    TipoStep.VIDEO_EXTRACTION: "Extração de vídeos",
     TipoStep.AGENT: "Agente",
     TipoStep.TRUST: "TRUST",
     TipoStep.OUTPUT: "Output",
@@ -205,11 +207,12 @@ class PipelineEngine:
         Normaliza a lista de etapas.
 
         Sem etapas declaradas, monta a pipeline padrão. Etapas `agent` sempre
-        entram depois de REFINED, e COMMENT_ENRICHMENT/TRUST/OUTPUT sempre no
-        fim — a ordem das camadas é invariante da arquitetura, não
-        configuração do usuário. O enriquecimento de comentários em
-        particular **não é configurável**: roda sempre que há comentários
-        coletados, mesmo que o usuário não o tenha declarado na lista de
+        entram depois de REFINED, e COMMENT_ENRICHMENT/VIDEO_EXTRACTION/
+        TRUST/OUTPUT sempre no fim — a ordem das camadas é invariante da
+        arquitetura, não configuração do usuário. O enriquecimento de
+        comentários e a extração de vídeos, em particular, **não são
+        configuráveis**: rodam sempre que há comentários/transcrições
+        coletados, mesmo que o usuário não os tenha declarado na lista de
         `steps` (mesmo tratamento que TRUST já recebe).
         """
         if not config.steps:
@@ -219,7 +222,10 @@ class PipelineEngine:
         agentes = [p for p in declarados if p.type == TipoStep.AGENT]
         outros = [
             p for p in declarados
-            if p.type not in (TipoStep.AGENT, TipoStep.COMMENT_ENRICHMENT, TipoStep.TRUST, TipoStep.OUTPUT)
+            if p.type not in (
+                TipoStep.AGENT, TipoStep.COMMENT_ENRICHMENT,
+                TipoStep.VIDEO_EXTRACTION, TipoStep.TRUST, TipoStep.OUTPUT,
+            )
         ]
 
         ordem = {t: i for i, t in enumerate(STEPS_PADRAO)}
@@ -229,6 +235,7 @@ class PipelineEngine:
         return (
             outros
             + [PassoPipeline(type=TipoStep.COMMENT_ENRICHMENT)]
+            + [PassoPipeline(type=TipoStep.VIDEO_EXTRACTION)]
             + agentes
             + [PassoPipeline(type=TipoStep.TRUST)]
             + finais
@@ -248,6 +255,7 @@ class PipelineEngine:
             TipoStep.RAW: self._passo_raw,
             TipoStep.REFINED: self._passo_refined,
             TipoStep.COMMENT_ENRICHMENT: self._passo_enriquecimento_comentarios,
+            TipoStep.VIDEO_EXTRACTION: self._passo_extracao_videos,
             TipoStep.AGENT: self._passo_agente,
             TipoStep.TRUST: self._passo_trust,
             TipoStep.OUTPUT: self._passo_output,
@@ -621,6 +629,65 @@ class PipelineEngine:
             return
 
         detalhe = f"{sucesso}/{len(resultados)} comentário(s) enriquecido(s)"
+        resultado.concluir(detalhe)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Extração automática de vídeos
+    # ─────────────────────────────────────────────────────────────────────────
+
+    async def _passo_extracao_videos(self, passo, contexto, run, resultado) -> None:
+        """
+        Struct único e fixo (`resumo`/`topicos`/`modelos_mencionados`/
+        `pontos_positivos`/`pontos_negativos`) para todo vídeo com
+        transcrição coletada — mesma ideia de
+        `_passo_enriquecimento_comentarios`, mas uma chamada de LLM por
+        vídeo (sobre título + transcrição) em vez de por lote de
+        comentários. Sem "modos" selecionáveis, sempre roda (não é uma
+        etapa `agent` configurável pelo usuário). Grava o resultado em
+        `contexto["trust"]["extracao_videos"]`.
+        """
+        videos: list[dict] = contexto["refined"].get("videos") or []
+        transcricoes: dict = contexto["refined"].get("transcripts") or {}
+
+        videos_com_transcricao = [
+            v for v in videos if (transcricoes.get(v["video_id"]) or {}).get("clean_text")
+        ]
+        if not videos_com_transcricao:
+            resultado.pular("nenhum vídeo com transcrição para extrair")
+            return
+
+        # Import local: mesmo motivo do enriquecimento de comentários (evita
+        # ciclo de import entre engine.py e src/analytics/video_extraction.py).
+        from src.analytics.video_extraction import extrair_video, garantir_prompt
+
+        prompt = garantir_prompt()
+        llm: ConfigLLM = contexto["llm"]
+        agente = Agente(
+            provider=llm.provider,
+            model=llm.model,
+            temperature=llm.temperature,
+            max_tokens=llm.max_tokens,
+        )
+
+        resultados: list[dict] = []
+        for video in videos_com_transcricao:
+            texto = self._recortar(transcricoes[video["video_id"]]["clean_text"])
+            item = await extrair_video(agente, video, texto, prompt=prompt)
+            resultados.append(item)
+            if item.get("usage"):
+                self._somar_usage(contexto["usage"], item["usage"])
+
+        contexto["trust"]["extracao_videos"] = resultados
+
+        sucesso = sum(1 for r in resultados if r["success"])
+        if sucesso == 0:
+            resultado.falhar(
+                "VideoExtractionError",
+                f"Todos os {len(resultados)} vídeo(s) falharam na extração.",
+            )
+            return
+
+        detalhe = f"{sucesso}/{len(resultados)} vídeo(s) extraído(s)"
         resultado.concluir(detalhe)
 
     # ─────────────────────────────────────────────────────────────────────────

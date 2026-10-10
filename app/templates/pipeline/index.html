@@ -1,6 +1,6 @@
 {% extends "_layout/dashboard_base.html" %}
 
-{% block titulo %}Pipelines{% endblock %}
+{% block titulo %}Pipeline{% endblock %}
 {% block mode_accent %}--accent-pipeline{% endblock %}
 
 {% block extra_css %}
@@ -11,34 +11,48 @@
 
 <div class="page__header">
   <div>
-    <h1 class="page__titulo">Pipelines</h1>
+    <h1 class="page__titulo">Pipeline</h1>
     <p class="page__descricao">
-      Pipelines criadas no Playground: agenda, histórico de execuções e o código da
-      DAG do Airflow gerada a partir de cada configuração.
+      Agenda execuções recorrentes de qualquer modo de consulta para o {{ marca }} {{ modelo }} {{ versao }}
+      e guarda os resultados automaticamente.
     </p>
   </div>
-  <a href="{{ url_for('youtube', marca=marca, modelo=modelo, versao=versao) }}"
-     class="btn btn--primario">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
-    Abrir Playground
-  </a>
 </div>
 
 <div class="painel">
-  <div class="painel__cabecalho">
-    <div>
-      <h2 class="painel__titulo">Pipelines cadastradas</h2>
-      <p class="painel__legenda" data-resumo-pipelines>Carregando…</p>
+  <h2 class="painel__titulo">Novo agendamento</h2>
+  <p class="painel__legenda">Escolha o modo a ser executado e a frequência de repetição.</p>
+
+  <form class="form-pipeline" data-form-pipeline>
+    <div class="campo">
+      <label for="modo-pipeline">Modo</label>
+      <select id="modo-pipeline" name="modo">
+        <option value="scraping">Web Scraping</option>
+        <option value="youtube">YouTube Search</option>
+        <option value="x">X Search</option>
+        <option value="gov">Gov Mode</option>
+      </select>
     </div>
-    <button type="button" class="btn btn--linha btn--pequeno" data-recarregar>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><path d="M20 12a8 8 0 10-2.5 5.8M20 8v5h-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Recarregar
-    </button>
-  </div>
+    <div class="campo">
+      <label for="frequencia">Frequência</label>
+      <select id="frequencia" name="frequencia">
+        <option value="diaria">Diária</option>
+        <option value="semanal">Semanal</option>
+        <option value="mensal">Mensal</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn--primario" data-botao-agendar>Criar agendamento</button>
+  </form>
+</div>
+
+<div class="painel">
+  <h2 class="painel__titulo">Agendamentos ativos</h2>
+  <p class="painel__legenda">Execuções programadas para este veículo, com a data da próxima rodada.</p>
 
   <div data-lista-pipelines>
     <div class="vazio">
-      <strong>Carregando pipelines…</strong>
+      <strong>Nenhum agendamento criado ainda</strong>
+      Crie um agendamento acima para automatizar a coleta de dados deste veículo.
     </div>
   </div>
 </div>

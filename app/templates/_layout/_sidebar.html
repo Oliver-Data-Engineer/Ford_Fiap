@@ -23,8 +23,8 @@
 
   <nav class="sidebar__nav">
 
-    <a href="{{ url_for('dashboard', marca=marca, modelo=modelo, versao=versao) }}"
-       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'dashboard' }}"
+    <a href="{{ url_for('dashboard.index') }}"
+       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'dashboard.index' }}"
        style="--item-accent: var(--accent-home)"
        data-rotulo="Home">
       <span class="sidebar__item-icone">
@@ -38,8 +38,8 @@
 
     <p class="sidebar__grupo-rotulo">Modos de consulta</p>
 
-    <a href="{{ url_for('scraping', marca=marca, modelo=modelo, versao=versao) }}"
-       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'scraping' }}"
+    <a href="{{ url_for('scraping.index') }}"
+       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'scraping.index' }}"
        style="--item-accent: var(--accent-scraping)"
        data-rotulo="Web Scraping">
       <span class="sidebar__item-icone">
@@ -51,8 +51,8 @@
       <span class="sidebar__item-texto">Web Scraping</span>
     </a>
 
-    <a href="{{ url_for('youtube', marca=marca, modelo=modelo, versao=versao) }}"
-       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'youtube' }}"
+    <a href="{{ url_for('youtube.index') }}"
+       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'youtube.index' }}"
        style="--item-accent: var(--accent-youtube)"
        data-rotulo="YouTube Search">
       <span class="sidebar__item-icone">
@@ -64,8 +64,8 @@
       <span class="sidebar__item-texto">YouTube Search</span>
     </a>
 
-    <a href="{{ url_for('x_search', marca=marca, modelo=modelo, versao=versao) }}"
-       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'x_search' }}"
+    <a href="{{ url_for('x_mode.index') }}"
+       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'x_mode.index' }}"
        style="--item-accent: var(--accent-x)"
        data-rotulo="X Search">
       <span class="sidebar__item-icone">
@@ -76,8 +76,8 @@
       <span class="sidebar__item-texto">X Search</span>
     </a>
 
-    <a href="{{ url_for('gov', marca=marca, modelo=modelo, versao=versao) }}"
-       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'gov' }}"
+    <a href="{{ url_for('gov.index') }}"
+       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'gov.index' }}"
        style="--item-accent: var(--accent-gov)"
        data-rotulo="Gov Mode">
       <span class="sidebar__item-icone">
@@ -89,36 +89,23 @@
       <span class="sidebar__item-texto">Gov Mode</span>
     </a>
 
-    <a href="{{ url_for('scraper', marca=marca, modelo=modelo, versao=versao) }}"
-       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'scraper' }}"
-       style="--item-accent: var(--accent-scraper)"
-       data-rotulo="Scraper Mode">
-      <span class="sidebar__item-icone">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-          <rect x="3.5" y="4" width="17" height="16" rx="2"/>
-          <path d="M7 9h10M7 13h10M7 17h6" stroke-linecap="round"/>
-        </svg>
-      </span>
-      <span class="sidebar__item-texto">Scraper Mode</span>
-    </a>
-
     <p class="sidebar__grupo-rotulo">Automação</p>
 
-    <a href="{{ url_for('pipeline', marca=marca, modelo=modelo, versao=versao) }}"
-       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'pipeline' }}"
+    <a href="{{ url_for('pipeline.index') }}"
+       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'pipeline.index' }}"
        style="--item-accent: var(--accent-pipeline)"
-       data-rotulo="Pipelines">
+       data-rotulo="Pipeline">
       <span class="sidebar__item-icone">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
           <circle cx="5" cy="6" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="18" r="2"/>
           <path d="M7 6h6a4 4 0 014 4M7 18h6a4 4 0 004-4" stroke-linecap="round"/>
         </svg>
       </span>
-      <span class="sidebar__item-texto">Pipelines</span>
+      <span class="sidebar__item-texto">Pipeline</span>
     </a>
 
-    <a href="{{ url_for('compare', marca=marca, modelo=modelo, versao=versao) }}"
-       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'compare' }}"
+    <a href="{{ url_for('compare.index') }}"
+       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'compare.index' }}"
        style="--item-accent: var(--accent-compare)"
        data-rotulo="Compare">
       <span class="sidebar__item-icone">
@@ -128,18 +115,6 @@
         </svg>
       </span>
       <span class="sidebar__item-texto">Compare</span>
-    </a>
-
-    <a href="{{ url_for('analytics', marca=marca, modelo=modelo, versao=versao) }}"
-       class="sidebar__item {{ 'is-ativo' if request.endpoint == 'analytics' }}"
-       style="--item-accent: var(--accent-analytics)"
-       data-rotulo="Dashboard">
-      <span class="sidebar__item-icone">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-          <path d="M5 19V10M12 19V5M19 19v-7" stroke-linecap="round"/>
-        </svg>
-      </span>
-      <span class="sidebar__item-texto">Dashboard</span>
     </a>
 
   </nav>

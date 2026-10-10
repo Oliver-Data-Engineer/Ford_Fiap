@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class GeminiProvider(LLMProvider):
     nome = "gemini"
     base_url_padrao = "https://generativelanguage.googleapis.com/v1beta"
-    modelo_padrao = "gemini-2.0-flash"
+    modelo_padrao = "gemini-3.5-flash-lite"
 
     def _url(self) -> str:
         base = (self.base_url or self.base_url_padrao).rstrip("/")

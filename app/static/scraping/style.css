@@ -1,93 +1,9 @@
-/* ── Seleção de veículo ──────────────────────────────────────────────────── */
-
-.grade { display: grid; gap: 14px; }
-.grade--3 { grid-template-columns: repeat(3, 1fr); }
-
-.campo select {
-  width: 100%;
-  appearance: none;
-  background-image: linear-gradient(45deg, transparent 50%, var(--text-faint) 50%),
-    linear-gradient(135deg, var(--text-faint) 50%, transparent 50%);
-  background-position: calc(100% - 18px) center, calc(100% - 13px) center;
-  background-size: 5px 5px, 5px 5px;
-  background-repeat: no-repeat;
-}
-
-.campo select:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.mensagem {
-  margin: 14px 0 0;
-  padding: 12px 14px;
-  border-radius: var(--radius);
-  font-size: 13px;
-  color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 8%, transparent);
-}
-
-@media (max-width: 700px) {
-  .grade--3 { grid-template-columns: 1fr; }
-}
-
-/* ── Formulário de pesquisa ──────────────────────────────────────────────── */
-
-.form-specs {
+.form-scraping {
   display: grid;
-  gap: 20px;
-  margin-top: 20px;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 14px;
+  align-items: end;
 }
-
-.form-specs__rodape {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-/* ── Status da busca ─────────────────────────────────────────────────────── */
-
-.status-busca {
-  font-size: 12px;
-  font-family: var(--font-mono);
-  color: var(--text-muted);
-}
-
-.status-busca.esta-rodando  { color: var(--mode-accent); }
-.status-busca.esta-concluida { color: var(--ok); }
-.status-busca.esta-erro      { color: var(--danger); }
-
-/* ── Spinner de carregamento ─────────────────────────────────────────────── */
-
-.spinner-wrap {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 32px 0;
-  color: var(--text-muted);
-}
-
-.spinner {
-  display: inline-block;
-  width: 22px;
-  height: 22px;
-  border: 3px solid var(--hairline-strong);
-  border-top-color: var(--mode-accent);
-  border-radius: 50%;
-  animation: spin 0.75s linear infinite;
-  flex-shrink: 0;
-}
-
-.spinner__texto {
-  font-size: 14px;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* ── Cabeçalho do painel de resultado ────────────────────────────────────── */
 
 .painel__cabecalho {
   display: flex;
@@ -95,182 +11,19 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 4px;
-  flex-wrap: wrap;
 }
 
-.painel__acoes {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-}
-
-/* ── Aviso de limite de linhas ───────────────────────────────────────────── */
-
-.aviso {
-  padding: 10px 14px;
-  border-radius: var(--radius);
-  font-size: 13px;
-  margin-bottom: 12px;
-}
-
-.aviso--limite {
-  background: color-mix(in srgb, var(--warn) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
-  color: var(--text-primary);
-}
-
-/* ── Mensagem de erro inline ─────────────────────────────────────────────── */
-
-.erro-inline {
-  padding: 14px 16px;
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--danger) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
-  color: var(--text-primary);
-  font-size: 14px;
-}
-
-.btn--pequeno { padding: 7px 16px; font-size: 12.5px; }
-
-/* ── Seções retráteis por categoria (estilo "ficha completa") ────────────── */
-
-.secoes-specs {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.dobra { border-top: 1px solid var(--hairline); }
-
-.dobra__resumo {
-  padding: 11px 16px;
-  cursor: pointer;
-  list-style: none;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.dobra__resumo::-webkit-details-marker { display: none; }
-
-.dobra__resumo::before {
-  content: '';
-  width: 5px;
-  height: 5px;
-  border-right: 1.5px solid var(--text-faint);
-  border-bottom: 1.5px solid var(--text-faint);
-  transform: rotate(45deg);
-  transition: transform 0.15s;
-  margin-left: auto;
-  order: 3;
-}
-
-.dobra[open] > .dobra__resumo::before { transform: rotate(-135deg); }
-.dobra[open] > .dobra__resumo { color: var(--text-primary); }
-
-.dobra__corpo { padding: 0 16px 16px; }
-
-/* Cartão branco arredondado por categoria — visual próprio, não a divisória
-   simples que .dobra usa em Scraper/Gov/Pipelines */
-.especificacao-secao {
-  border: 1px solid var(--hairline-strong);
-  border-radius: var(--radius);
-  background: var(--bg-panel);
-  overflow: hidden;
-}
-
-.especificacao-secao .dobra__resumo {
-  font-size: 13.5px;
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-/* Cabeçalho de colunas + linhas rótulo/valor/fonte dentro de cada categoria */
-
-.spec-linha {
-  display: grid;
-  grid-template-columns: minmax(140px, 1.2fr) minmax(120px, 1.4fr) 100px;
-  gap: 12px;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--hairline);
-  align-items: baseline;
-}
-
-.spec-linha:last-child { border-bottom: none; }
-
-.spec-linha--cabecalho {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-faint);
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--hairline-strong);
-}
-
-.spec-linha__atributo {
-  font-weight: 500;
-  color: var(--text-primary);
-  word-break: break-word;
-}
-
-.spec-linha__valor {
-  color: var(--text-primary);
-  font-weight: 600;
-  word-break: break-word;
-}
-
-.spec-linha__fonte {
-  font-family: var(--font-mono);
+.status-varredura {
   font-size: 12px;
+  font-family: var(--font-mono);
   color: var(--text-muted);
   white-space: nowrap;
-  justify-self: start;
+  padding-top: 2px;
 }
 
-@media (max-width: 600px) {
-  .spec-linha {
-    grid-template-columns: 1fr;
-    gap: 2px;
-    padding: 10px 0;
-  }
-  .spec-linha--cabecalho { display: none; }
-  .spec-linha__fonte { justify-self: start; }
-}
+.status-varredura.esta-rodando { color: var(--mode-accent); }
+.status-varredura.esta-concluida { color: var(--ok); }
 
-/* ── Célula "não disponível" ─────────────────────────────────────────────── */
-/*
- * Visualmente distinto sem depender só de cor (Req 9.2):
- * usa itálico + opacidade reduzida + ícone em pseudo-elemento.
- */
-.valor--indisponivel {
-  color: var(--text-muted);
-  font-style: italic;
-  opacity: 0.65;
-}
-
-.valor--indisponivel::before {
-  content: "— ";
-  font-style: normal;
-  font-weight: 600;
-  opacity: 0.5;
-}
-
-/* ── Responsividade ──────────────────────────────────────────────────────── */
-
-@media (max-width: 600px) {
-  .form-specs__rodape {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .painel__cabecalho {
-    flex-direction: column;
-  }
+@media (max-width: 700px) {
+  .form-scraping { grid-template-columns: 1fr; }
 }
